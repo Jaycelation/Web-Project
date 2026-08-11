@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" role="img" aria-labelledby="title desc">
+  <title id="title">Nova X1 5G</title><desc id="desc">Minh họa điện thoại thông minh màu xanh.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e8eef0"/><stop offset="1" stop-color="#ede4d6"/></linearGradient><linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#12364a"/><stop offset=".55" stop-color="#25728a"/><stop offset="1" stop-color="#e6aa54"/></linearGradient></defs>
+  <rect width="720" height="560" rx="44" fill="url(#bg)"/>
+  <ellipse cx="360" cy="475" rx="174" ry="28" fill="#17303b" opacity=".12"/>
+  <g transform="rotate(-8 360 280)">
+    <rect x="241" y="55" width="238" height="440" rx="42" fill="#0b1820"/>
+    <rect x="254" y="70" width="212" height="410" rx="31" fill="url(#screen)"/>
+    <path d="M265 371c56-115 119-120 189-46v144H265z" fill="#f4efe6" opacity=".82"/>
+    <path d="M264 412c70-70 129-54 191 17v40H264z" fill="#e4a84f" opacity=".92"/>
+    <rect x="319" y="77" width="82" height="17" rx="9" fill="#0b1820"/>
+    <circle cx="440" cy="91" r="5" fill="#2c8ba5"/>
+  </g>
+  <g transform="translate(477 104) rotate(7)">
+    <rect width="94" height="164" rx="24" fill="#315b6c"/>
+    <circle cx="29" cy="35" r="19" fill="#08161d"/><circle cx="65" cy="35" r="19" fill="#08161d"/>
+    <circle cx="29" cy="82" r="19" fill="#08161d"/><circle cx="29" cy="35" r="8" fill="#5e9db2"/><circle cx="65" cy="35" r="8" fill="#5e9db2"/><circle cx="29" cy="82" r="8" fill="#5e9db2"/>
+    <circle cx="66" cy="82" r="7" fill="#e5a94b"/>
+  </g>
+</svg>

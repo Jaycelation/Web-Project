@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" role="img" aria-labelledby="title desc">
+  <title id="title">Bàn phím cơ Orbit 75</title><desc id="desc">Minh họa bàn phím cơ layout 75 phần trăm.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#efe7db"/><stop offset="1" stop-color="#dce8e8"/></linearGradient><linearGradient id="case" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#193845"/><stop offset="1" stop-color="#0a171e"/></linearGradient></defs>
+  <rect width="720" height="560" rx="44" fill="url(#bg)"/>
+  <ellipse cx="360" cy="438" rx="245" ry="31" fill="#15313d" opacity=".12"/>
+  <g transform="translate(104 145) rotate(-3 256 134)">
+    <rect width="512" height="268" rx="28" fill="url(#case)"/>
+    <rect x="18" y="18" width="476" height="229" rx="17" fill="#284a57"/>
+    <g fill="#f5efe5">
+      <rect x="31" y="34" width="39" height="35" rx="7"/><rect x="77" y="34" width="39" height="35" rx="7"/><rect x="123" y="34" width="39" height="35" rx="7"/><rect x="169" y="34" width="39" height="35" rx="7"/><rect x="215" y="34" width="39" height="35" rx="7"/><rect x="261" y="34" width="39" height="35" rx="7"/><rect x="307" y="34" width="39" height="35" rx="7"/><rect x="353" y="34" width="39" height="35" rx="7"/><rect x="399" y="34" width="39" height="35" rx="7"/>
+      <rect x="31" y="76" width="50" height="37" rx="7"/><rect x="88" y="76" width="39" height="37" rx="7"/><rect x="134" y="76" width="39" height="37" rx="7"/><rect x="180" y="76" width="39" height="37" rx="7"/><rect x="226" y="76" width="39" height="37" rx="7"/><rect x="272" y="76" width="39" height="37" rx="7"/><rect x="318" y="76" width="39" height="37" rx="7"/><rect x="364" y="76" width="39" height="37" rx="7"/><rect x="410" y="76" width="60" height="37" rx="7"/>
+      <rect x="31" y="120" width="62" height="37" rx="7"/><rect x="100" y="120" width="39" height="37" rx="7"/><rect x="146" y="120" width="39" height="37" rx="7"/><rect x="192" y="120" width="39" height="37" rx="7"/><rect x="238" y="120" width="39" height="37" rx="7"/><rect x="284" y="120" width="39" height="37" rx="7"/><rect x="330" y="120" width="39" height="37" rx="7"/><rect x="376" y="120" width="94" height="37" rx="7"/>
+      <rect x="31" y="164" width="78" height="37" rx="7"/><rect x="116" y="164" width="39" height="37" rx="7"/><rect x="162" y="164" width="39" height="37" rx="7"/><rect x="208" y="164" width="39" height="37" rx="7"/><rect x="254" y="164" width="39" height="37" rx="7"/><rect x="300" y="164" width="39" height="37" rx="7"/><rect x="346" y="164" width="39" height="37" rx="7"/><rect x="392" y="164" width="78" height="37" rx="7"/>
+      <rect x="31" y="208" width="55" height="26" rx="6"/><rect x="93" y="208" width="55" height="26" rx="6"/><rect x="155" y="208" width="185" height="26" rx="6"/><rect x="347" y="208" width="55" height="26" rx="6"/><rect x="409" y="208" width="61" height="26" rx="6"/>
+    </g>
+    <g fill="#e5a94b"><rect x="399" y="34" width="39" height="35" rx="7"/><rect x="410" y="76" width="60" height="37" rx="7"/><rect x="392" y="164" width="78" height="37" rx="7"/></g>
+  </g>
+</svg>

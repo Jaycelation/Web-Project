@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-secure_commerce}
+      POSTGRES_USER: ${POSTGRES_USER:-secure_commerce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_commerce_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secure_commerce} -d ${POSTGRES_DB:-secure_commerce}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      API_PORT: 4000
+      WEB_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-secure_commerce}:${POSTGRES_PASSWORD:-secure_commerce_dev}@db:5432/${POSTGRES_DB:-secure_commerce}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-only-replace-this-secret-before-production}
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL_DAYS: 30
+      COOKIE_SECURE: "false"
+      CRYPTO_KEY_ID: dev-rsa-2026-01
+      CRYPTO_PRIVATE_KEY_PATH: /app/apps/api/.local/keys/server-private.pem
+      CRYPTO_PUBLIC_KEY_PATH: /app/apps/api/.local/keys/server-public.pem
+      CRYPTO_AUTO_GENERATE: "true"
+      CRYPTO_MAX_CLOCK_SKEW_MS: 120000
+      CRYPTO_REPLAY_TTL_MS: 180000
+      CRYPTO_RSA_BITS: 3072
+    ports:
+      - "4000:4000"
+    volumes:
+      - crypto_keys:/app/apps/api/.local/keys
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      API_INTERNAL_URL: http://api:4000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  crypto_keys:

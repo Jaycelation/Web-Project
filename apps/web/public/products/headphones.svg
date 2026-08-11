@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" role="img" aria-labelledby="title desc">
+  <title id="title">Tai nghe Aurora Pro</title><desc id="desc">Minh họa tai nghe chụp tai màu tối trên nền sáng.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4efe6"/><stop offset="1" stop-color="#dfe8eb"/></linearGradient><linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#183746"/><stop offset="1" stop-color="#07151e"/></linearGradient></defs>
+  <rect width="720" height="560" rx="44" fill="url(#bg)"/>
+  <circle cx="360" cy="280" r="210" fill="#fff" opacity=".34"/>
+  <path d="M230 294c0-128 54-197 130-197s130 69 130 197" fill="none" stroke="url(#metal)" stroke-width="44" stroke-linecap="round"/>
+  <path d="M254 290c0-95 38-151 106-151s106 56 106 151" fill="none" stroke="#5b7681" stroke-width="13" opacity=".6"/>
+  <rect x="184" y="274" width="116" height="190" rx="52" fill="url(#metal)"/>
+  <rect x="420" y="274" width="116" height="190" rx="52" fill="url(#metal)"/>
+  <rect x="207" y="300" width="70" height="139" rx="33" fill="#294b5a"/>
+  <rect x="443" y="300" width="70" height="139" rx="33" fill="#294b5a"/>
+  <circle cx="242" cy="369" r="16" fill="#e5a94b"/>
+  <path d="M471 386c-8 40-34 65-80 72" fill="none" stroke="#183746" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="385" cy="459" r="11" fill="#e5a94b"/>
+</svg>

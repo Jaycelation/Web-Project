@@ -1,0 +1,17 @@
+'use client';
+
+import type { DashboardDto } from '@secure-commerce/contracts';
+import { useEffect, useState } from 'react';
+import { apiErrorMessage, browserApi } from '@/lib/api';
+import { formatMoney } from '@/lib/format';
+import { orderStatusLabel } from '@/lib/status';
+import { LoadingState } from './loading-state';
+
+export function AdminDashboard() {
+  const [data, setData] = useState<DashboardDto | null>(null); const [days, setDays] = useState(30); const [error, setError] = useState(''); const [loading, setLoading] = useState(true);
+  useEffect(() => { setLoading(true); void browserApi().request<DashboardDto>('/admin/dashboard', { days }).then(setData).catch((requestError) => setError(apiErrorMessage(requestError))).finally(() => setLoading(false)); }, [days]);
+  if (loading && !data) return <LoadingState />;
+  if (!data) return <div className="alert alert-error">{error || 'Không tải được dashboard.'}</div>;
+  const maxRevenue = Math.max(...data.dailyRevenue.map((item) => item.revenue), 1);
+  return <><div className="admin-heading"><div><h1>Operating dashboard</h1><p>Tổng quan doanh thu, đơn hàng và tồn kho.</p></div><select value={days} onChange={(event) => setDays(Number(event.target.value))}><option value={7}>7 ngày</option><option value={30}>30 ngày</option><option value={90}>90 ngày</option></select></div>{error && <div className="alert alert-error">{error}</div>}<div className="admin-metrics"><div className="admin-metric"><small>Doanh thu</small><strong>{formatMoney(data.revenue)}</strong><span>Đơn đã giao</span></div><div className="admin-metric"><small>Số đơn</small><strong>{data.orderCount}</strong><span>Trong kỳ</span></div><div className="admin-metric"><small>Giá trị đơn TB</small><strong>{formatMoney(data.averageOrderValue)}</strong><span>AOV</span></div><div className="admin-metric"><small>Tỷ lệ hủy</small><strong>{data.cancellationRate}%</strong><span>{data.newCustomers} khách mới</span></div></div><div className="admin-grid"><section className="admin-card"><h2>Doanh thu theo ngày</h2>{data.dailyRevenue.length ? <div className="chart-placeholder">{data.dailyRevenue.map((item) => <div key={item.date} className="chart-bar" style={{ height: `${Math.max(6, item.revenue / maxRevenue * 100)}%` }} data-value={`${item.date}: ${formatMoney(item.revenue)}`} />)}</div> : <p>Chưa có doanh thu đã giao trong kỳ.</p>}</section><section className="admin-card"><h2>Đơn theo trạng thái</h2><div className="order-list">{data.ordersByStatus.map((item) => <div className="summary-row" key={item.status}><span>{orderStatusLabel[item.status]}</span><strong>{item.count}</strong></div>)}</div></section><section className="admin-card"><h2>Sản phẩm bán chạy</h2><div className="table-wrap"><table className="data-table"><thead><tr><th>Sản phẩm</th><th>SL</th><th>Doanh thu</th></tr></thead><tbody>{data.bestSellers.map((item) => <tr key={item.productName}><td>{item.productName}</td><td>{item.quantity}</td><td>{formatMoney(item.revenue)}</td></tr>)}</tbody></table></div></section><section className="admin-card"><h2>Cảnh báo tồn kho</h2><div className="table-wrap"><table className="data-table"><thead><tr><th>SKU</th><th>Sản phẩm</th><th>Khả dụng</th></tr></thead><tbody>{data.lowStock.map((item) => <tr key={item.variantId}><td>{item.sku}</td><td>{item.productName}</td><td><span className="status-badge" data-status={item.availableStock === 0 ? 'CANCELLED' : 'RETURN_REQUESTED'}>{item.availableStock}</span></td></tr>)}</tbody></table></div></section></div></>;
+}

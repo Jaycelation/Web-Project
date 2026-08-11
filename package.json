@@ -1,0 +1,33 @@
+{
+  "name": "secure-commerce",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP thương mại điện tử modular monolith với Next.js, NestJS, PostgreSQL và hybrid RSA + AES envelope encryption.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c auto \"npm run dev -w @secure-commerce/api\" \"npm run dev -w @secure-commerce/web\"",
+    "build": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && npm run build -w @secure-commerce/contracts && npm run build -w @secure-commerce/api && npm run build -w @secure-commerce/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test:core && npm run test --workspaces --if-present",
+    "test:core": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && node --test scripts/acceptance-core.test.mjs",
+    "test:api": "node scripts/acceptance-api.mjs",
+    "db:generate": "npm run db:generate -w @secure-commerce/api",
+    "db:push": "npm run db:push -w @secure-commerce/api",
+    "db:migrate": "npm run db:migrate -w @secure-commerce/api",
+    "db:seed": "npm run db:seed -w @secure-commerce/api",
+    "crypto:keys": "node scripts/generate-crypto-keys.mjs",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,66 @@
+SECURE COMMERCE - VERIFICATION RECORD
+Date: 2026-08-11
+
+1) Core package typecheck
+   PASS: packages/contracts
+   PASS: packages/domain
+   PASS: packages/crypto-envelope
+
+2) Core acceptance tests
+TAP version 13
+# Subtest: hybrid envelope round-trip request và response
+ok 1 - hybrid envelope round-trip request và response
+  ---
+  duration_ms: 508.246603
+  type: 'test'
+  ...
+# Subtest: AES-GCM phát hiện ciphertext bị sửa
+ok 2 - AES-GCM phát hiện ciphertext bị sửa
+  ---
+  duration_ms: 445.412622
+  type: 'test'
+  ...
+# Subtest: AAD bị sửa làm envelope không xác thực được
+ok 3 - AAD bị sửa làm envelope không xác thực được
+  ---
+  duration_ms: 420.960798
+  type: 'test'
+  ...
+# Subtest: server tính giá từ catalogue tin cậy, bỏ qua giá giả do client chèn
+ok 4 - server tính giá từ catalogue tin cậy, bỏ qua giá giả do client chèn
+  ---
+  duration_ms: 0.774263
+  type: 'test'
+  ...
+# Subtest: không cho mua vượt tồn kho
+ok 5 - không cho mua vượt tồn kho
+  ---
+  duration_ms: 0.370992
+  type: 'test'
+  ...
+# Subtest: state machine đơn hàng chặn chuyển trạng thái trái phép
+ok 6 - state machine đơn hàng chặn chuyển trạng thái trái phép
+  ---
+  duration_ms: 0.229972
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1459.333224
+
+3) Source parse check
+   PASS: 124 TypeScript/TSX files; 0 parse errors
+
+4) Local import/assets check
+   PASS: 0 missing local imports
+   PASS: 0 missing referenced /products assets
+
+5) Full dependency/build status
+   NOT EXECUTED: npm registry DNS unavailable in packaging environment (EAI_AGAIN).
+   Required after handover: npm install && npm run build && npm run typecheck && npm test
