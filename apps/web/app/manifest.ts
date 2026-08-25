@@ -1,2 +1,2 @@
 import type { MetadataRoute } from 'next';
-export default function manifest(): MetadataRoute.Manifest { return { name: 'Secure Commerce', short_name: 'SecureCommerce', description: 'MVP thương mại điện tử bảo mật', start_url: '/', display: 'standalone', background_color: '#f4f7f8', theme_color: '#0c1b2a', icons: [] }; }
+export default function manifest(): MetadataRoute.Manifest { return { name: 'MIRA', short_name: 'MIRA', description: 'Thiết bị công nghệ cho cuộc sống hiện đại', start_url: '/', display: 'standalone', background_color: '#f7f7f5', theme_color: '#f7f7f5', icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' }] }; }

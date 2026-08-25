@@ -1,11 +1,15 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { timingSafeEqual } from 'node:crypto';
+import type { Request } from 'express';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Express.Request>();
-    if (!request.cookies?.access_token) return true;
+    const request = context.switchToHttp().getRequest<Request>();
+    const hasSessionCookie = Boolean(
+      request.cookies?.access_token || request.cookies?.refresh_token,
+    );
+    if (!hasSessionCookie) return true;
 
     const cookieToken = request.cookies.csrf_token as string | undefined;
     const headerToken = request.header('x-csrf-token');

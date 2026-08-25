@@ -240,7 +240,9 @@ export class CheckoutService {
               unitPrice: line.unitPrice,
               quantity: line.quantity,
               lineTotal: line.lineTotal,
-              attributes: variant.attributes,
+              attributes: variant.attributes === null
+                ? Prisma.JsonNull
+                : variant.attributes as Prisma.InputJsonValue,
             };
           }),
         },

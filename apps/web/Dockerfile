@@ -2,14 +2,18 @@ FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+ARG NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256=
+ARG NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-COPY package.json tsconfig.base.json ./
+ENV NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256=$NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256
+ENV NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256=$NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/crypto-envelope/package.json packages/crypto-envelope/package.json
 COPY packages/domain/package.json packages/domain/package.json
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 COPY packages ./packages
 COPY apps/web ./apps/web
 RUN npm run build -w @secure-commerce/contracts \
@@ -22,5 +26,6 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
+USER node
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]

@@ -7,6 +7,10 @@ import { apiErrorMessage, clientSearchCatalog } from '@/lib/api';
 import { ProductCard } from './product-card';
 import { LoadingState } from './loading-state';
 
+type CatalogFilterPatch = {
+  [Key in keyof CatalogSearchInput]?: CatalogSearchInput[Key] | undefined;
+};
+
 export function CatalogBrowser({ initial, initialFilters }: { initial: CatalogSearchResult; initialFilters: CatalogSearchInput }) {
   const router = useRouter();
   const [result, setResult] = useState(initial);
@@ -39,7 +43,7 @@ export function CatalogBrowser({ initial, initialFilters }: { initial: CatalogSe
     return () => window.clearTimeout(timer);
   }, [filters, router]);
 
-  const patch = (value: Partial<CatalogSearchInput>) => setFilters((current) => ({ ...current, ...value, page: value.page ?? 1 }));
+  const patch = (value: CatalogFilterPatch) => setFilters((current) => mergeFilters(current, value));
   const applyPrice = () => patch({
     minPrice: minPrice ? Number(minPrice) : undefined,
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
@@ -86,4 +90,14 @@ export function CatalogBrowser({ initial, initialFilters }: { initial: CatalogSe
       {pageCount > 1 && <div className="pagination">{Array.from({ length: pageCount }, (_, index) => index + 1).slice(0, 8).map((page) => <button type="button" key={page} className={page === result.page ? 'active' : ''} onClick={() => patch({ page })}>{page}</button>)}</div>}
     </div>
   </div>;
+}
+
+function mergeFilters(current: CatalogSearchInput, patch: CatalogFilterPatch): CatalogSearchInput {
+  const next: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete next[key];
+    else next[key] = value;
+  }
+  next.page = patch.page ?? 1;
+  return next as CatalogSearchInput;
 }

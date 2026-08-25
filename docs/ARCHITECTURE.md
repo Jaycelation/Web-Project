@@ -2,14 +2,14 @@
 
 ## Mục tiêu
 
-Secure Commerce là một **modular monolith**: deploy một API process nhưng giữ ranh giới module, contract và transaction rõ ràng. Kiến trúc này giảm độ phức tạp vận hành của microservices trong MVP, đồng thời vẫn cho phép tách module sau này.
+MIRA Commerce là một **modular monolith**: deploy một API process nhưng giữ ranh giới module, contract và transaction rõ ràng. Kiến trúc này giảm độ phức tạp vận hành của microservices trong MVP, đồng thời vẫn cho phép tách module sau này.
 
 ## Sơ đồ thành phần
 
 ```mermaid
 flowchart LR
-  B[Browser / Next.js] -->|HTTPS + encrypted envelope| A[NestJS API]
-  A --> C[Crypto Envelope Infrastructure]
+  B[Browser / Next.js] -->|HTTPS + JWE v2| A[NestJS API]
+  A --> C[JOSE dual-stack v1/v2]
   A --> AU[Auth & Account]
   A --> CA[Catalog & Cart]
   A --> CO[Checkout & Orders]
@@ -28,22 +28,22 @@ flowchart LR
 - `apps/api`: NestJS modules; Prisma là persistence adapter.
 - `packages/contracts`: type giao tiếp dùng chung, không chứa persistence model.
 - `packages/domain`: pricing và order state machine thuần TypeScript, test không cần DB.
-- `packages/crypto-envelope`: protocol Web Crypto chạy được ở browser và Node.js.
+- `packages/crypto-envelope`: JWE/JWS profile, legacy v1 và `SecureApiClient` dùng Web Crypto trong browser/Node.js.
 
 ## Ranh giới module API
 
-| Module | Trách nhiệm |
-|---|---|
-| `auth` | Đăng ký/đăng nhập, session, refresh rotation, reset password |
-| `account` | Hồ sơ, địa chỉ, đổi mật khẩu |
-| `catalog` | Search/filter/detail và projection sản phẩm |
-| `cart` | Cart đã đăng nhập và kiểm tra tồn khả dụng |
-| `checkout` | Quote, pricing authoritative, coupon, idempotency, reservation |
-| `orders` | Tra cứu, state transition, cancel/return/refund flow |
-| `admin` | Dashboard, product, inventory, customer, CMS, audit |
-| `content` | Trang nội dung công khai |
-| `marketing` | Newsletter subscriber |
-| `notifications` | Outbox để worker ngoài gửi email/SMS |
+| Module          | Trách nhiệm                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `auth`          | Đăng ký/đăng nhập, session, refresh rotation, reset password   |
+| `account`       | Hồ sơ, địa chỉ, đổi mật khẩu                                   |
+| `catalog`       | Search/filter/detail và projection sản phẩm                    |
+| `cart`          | Cart đã đăng nhập và kiểm tra tồn khả dụng                     |
+| `checkout`      | Quote, pricing authoritative, coupon, idempotency, reservation |
+| `orders`        | Tra cứu, state transition, cancel/return/refund flow           |
+| `admin`         | Dashboard, product, inventory, customer, CMS, audit            |
+| `content`       | Trang nội dung công khai                                       |
+| `marketing`     | Newsletter subscriber                                          |
+| `notifications` | Outbox để worker ngoài gửi email/SMS                           |
 
 ## Luồng checkout
 
@@ -54,8 +54,8 @@ sequenceDiagram
   participant S as Checkout service
   participant D as PostgreSQL
 
-  U->>C: POST envelope + Idempotency-Key
-  C->>C: Decrypt + verify AAD + replay check
+  U->>C: POST Flattened JWE v2 + Idempotency-Key
+  C->>C: Decrypt/tag verify + route/header binding + replay check
   C->>S: DTO đã giải mã và validate
   S->>D: Serializable transaction
   S->>D: Load variants/coupon authoritative
@@ -65,7 +65,8 @@ sequenceDiagram
   S->>D: Coupon redemption + notification outbox
   D-->>S: Commit
   S-->>C: CheckoutResult
-  C-->>U: Encrypted response bound to request
+  C->>C: PS256 sign response, then encrypt JWS as JWE
+  C-->>U: Signed JWE response bound to request
 ```
 
 ## Quy tắc tồn kho

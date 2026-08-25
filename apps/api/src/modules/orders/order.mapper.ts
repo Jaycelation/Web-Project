@@ -51,27 +51,30 @@ export function mapOrder(order: OrderWithDetails): OrderDto {
 }
 
 function normalizeAddress(value: Prisma.JsonValue): ShippingAddressInput {
-  const record = value && !Array.isArray(value) && typeof value === 'object' ? value : {};
+  const record: Prisma.JsonObject = value && !Array.isArray(value) && typeof value === 'object' ? value : {};
+  const line2 = optionalString(record, 'line2');
+  const ward = optionalString(record, 'ward');
+  const postalCode = optionalString(record, 'postalCode');
   return {
     fullName: stringValue(record, 'fullName'),
     phone: stringValue(record, 'phone'),
     email: stringValue(record, 'email'),
     line1: stringValue(record, 'line1'),
-    ...(optionalString(record, 'line2') ? { line2: optionalString(record, 'line2') } : {}),
-    ...(optionalString(record, 'ward') ? { ward: optionalString(record, 'ward') } : {}),
+    ...(line2 ? { line2 } : {}),
+    ...(ward ? { ward } : {}),
     district: stringValue(record, 'district'),
     province: stringValue(record, 'province'),
-    ...(optionalString(record, 'postalCode') ? { postalCode: optionalString(record, 'postalCode') } : {}),
+    ...(postalCode ? { postalCode } : {}),
     country: optionalString(record, 'country') ?? 'VN',
   };
 }
 
-function stringValue(record: Record<string, Prisma.JsonValue>, key: string): string {
+function stringValue(record: Prisma.JsonObject, key: string): string {
   const value = record[key];
   return typeof value === 'string' ? value : '';
 }
 
-function optionalString(record: Record<string, Prisma.JsonValue>, key: string): string | undefined {
+function optionalString(record: Prisma.JsonObject, key: string): string | undefined {
   const value = record[key];
   return typeof value === 'string' && value ? value : undefined;
 }

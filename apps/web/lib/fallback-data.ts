@@ -58,7 +58,7 @@ export function fallbackDetail(slug: string): ProductDetailDto | undefined {
     : [{ id: `00000000-0000-4000-8000-${slug.length.toString().padStart(12, '0')}`, sku: product.slug.toUpperCase().slice(0, 18), name: 'Phiên bản tiêu chuẩn', attributes: {}, price: product.price, compareAtPrice: product.compareAtPrice, availableStock: 12, active: true }];
   return {
     ...product,
-    description: `${product.shortDescription} Sản phẩm demo được cung cấp để trải nghiệm đầy đủ luồng khám phá, giỏ hàng và checkout bảo mật.`,
+    description: `${product.shortDescription} Thiết kế cân bằng giữa trải nghiệm sử dụng, độ bền và tính thẩm mỹ trong cuộc sống hằng ngày.`,
     skuBase: variants[0]!.sku,
     images: [{ id: `${product.id}-image`, url: product.imageUrl, alt: product.imageAlt, position: 0 }],
     variants,

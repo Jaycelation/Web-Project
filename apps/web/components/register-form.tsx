@@ -17,7 +17,8 @@ export function RegisterForm() {
     if (data.get('password') !== data.get('confirmPassword')) { setError('Mật khẩu xác nhận không khớp.'); return; }
     setLoading(true); setError('');
     try {
-      await register({ name: String(data.get('name')), email: String(data.get('email')), phone: String(data.get('phone') ?? '') || undefined, password: String(data.get('password')) });
+      const phone = String(data.get('phone') ?? '').trim();
+      await register({ name: String(data.get('name')), email: String(data.get('email')), ...(phone ? { phone } : {}), password: String(data.get('password')) });
       router.replace('/tai-khoan');
     } catch (requestError) { setError(apiErrorMessage(requestError)); } finally { setLoading(false); }
   };

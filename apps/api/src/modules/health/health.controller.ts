@@ -1,8 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
-import { AllowPlaintext } from '../../common/decorators/allow-plaintext.decorator.js';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { Controller, Get } from "@nestjs/common";
+import { AllowPlaintext } from "../../common/decorators/allow-plaintext.decorator.js";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-@Controller('health')
+@Controller("health")
 @AllowPlaintext()
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
@@ -12,7 +12,7 @@ export class HealthController {
     await this.prisma.$queryRaw`SELECT 1`;
     return {
       ok: true,
-      service: 'secure-commerce-api',
+      service: "mira-api",
       timestamp: new Date().toISOString(),
     };
   }

@@ -1,15 +1,33 @@
-'use client';
+"use client";
 
-import type { AuthUserDto } from '@secure-commerce/contracts';
-import { SecureApiError } from '@secure-commerce/crypto-envelope';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiErrorMessage, browserApi, clientLogin, clientRegister } from '@/lib/api';
+import type { AuthUserDto } from "@secure-commerce/contracts";
+import { SecureApiError } from "@secure-commerce/crypto-envelope";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  apiErrorMessage,
+  browserRequest,
+  clientLogin,
+  clientRegister,
+} from "@/lib/api";
 
 interface AuthContextValue {
   user: AuthUserDto | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: { name: string; email: string; phone?: string; password: string }) => Promise<void>;
+  register: (input: {
+    name: string;
+    email: string;
+    phone?: string;
+    password: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 }
@@ -22,37 +40,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = useCallback(async () => {
     try {
-      const result = await browserApi().request<{ user: AuthUserDto }>('/auth/me', {});
+      const result = await browserRequest<{ user: AuthUserDto }>(
+        "/auth/me",
+        {},
+      );
       setUser(result.user);
     } catch (error) {
-      if (!(error instanceof SecureApiError && error.status === 401)) console.info(apiErrorMessage(error));
+      if (!(error instanceof SecureApiError && error.status === 401))
+        console.info(apiErrorMessage(error));
       setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { void refreshMe(); }, [refreshMe]);
+  useEffect(() => {
+    const hasSessionHint = document.cookie
+      .split(";")
+      .some((item) => item.trim().startsWith("csrf_token="));
+    if (!hasSessionHint) {
+      setLoading(false);
+      return;
+    }
+    void refreshMe();
+  }, [refreshMe]);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await clientLogin(email, password);
     setUser(result.user);
   }, []);
-  const register = useCallback(async (input: { name: string; email: string; phone?: string; password: string }) => {
-    const result = await clientRegister(input);
-    setUser(result.user);
-  }, []);
+  const register = useCallback(
+    async (input: {
+      name: string;
+      email: string;
+      phone?: string;
+      password: string;
+    }) => {
+      const result = await clientRegister(input);
+      setUser(result.user);
+    },
+    [],
+  );
   const logout = useCallback(async () => {
-    await browserApi().request('/auth/logout', {});
+    await browserRequest("/auth/logout", {});
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, register, logout, refreshMe }), [user, loading, login, register, logout, refreshMe]);
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout, refreshMe }),
+    [user, loading, login, register, logout, refreshMe],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth phải nằm trong AuthProvider.');
+  if (!context) throw new Error("useAuth phải nằm trong AuthProvider.");
   return context;
 }

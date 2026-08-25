@@ -4,11 +4,23 @@ import { notFound } from 'next/navigation';
 import { serverApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 
-const fallbackPages: Record<string, { title: string; content: string }> = {
-  'chinh-sach-giao-hang': { title: 'Chính sách giao hàng', content: 'Phạm vi giao hàng\n\nSecure Commerce giao hàng trên toàn quốc. Phí vận chuyển được tính theo cấu hình khu vực và giá trị đơn.\n\nThời gian xử lý\n\nĐơn được xác nhận trước khi chuyển sang chuẩn bị hàng. Mã vận đơn được cập nhật khi đơn chuyển sang trạng thái đang giao.\n\nLưu ý\n\nNội dung mẫu cần được rà soát theo quy trình vận hành thực tế trước khi mở bán.' },
-  'chinh-sach-doi-tra': { title: 'Chính sách đổi trả', content: 'Điều kiện đổi trả\n\nKhách hàng có thể gửi yêu cầu đổi trả cho đơn đã giao. Sản phẩm cần đáp ứng điều kiện về thời hạn, tình trạng và chứng từ mua hàng.\n\nQuy trình\n\nYêu cầu được gắn trực tiếp với đơn hàng để bộ phận vận hành xác minh, phê duyệt và xử lý hoàn tiền khi phù hợp.' },
-  'chinh-sach-bao-mat': { title: 'Chính sách bảo mật', content: 'Dữ liệu tài khoản\n\nMật khẩu được băm; access token và refresh token được quản lý theo session. Dữ liệu thẻ không được lưu trực tiếp trong MVP.\n\nBảo vệ truyền tải\n\nHTTPS là bắt buộc ở production. Lớp envelope RSA‑OAEP + AES‑256‑GCM chỉ là kiểm soát bổ sung, không thay thế TLS.\n\nNhật ký\n\nCác thao tác quản trị quan trọng được ghi audit log để phục vụ đối soát.' },
-  'dieu-khoan-su-dung': { title: 'Điều khoản sử dụng', content: 'Phạm vi sử dụng\n\nWebsite cung cấp chức năng khám phá sản phẩm, giỏ hàng, đặt hàng và quản lý đơn.\n\nTrách nhiệm người dùng\n\nNgười dùng cần cung cấp thông tin nhận hàng chính xác, giữ bí mật thông tin đăng nhập và không lạm dụng hệ thống.\n\nLưu ý pháp lý\n\nĐây là nội dung mẫu của bản MVP và cần được tư vấn, rà soát trước khi vận hành thương mại.' },
+const policyPages: Record<string, { title: string; content: string }> = {
+  'chinh-sach-giao-hang': {
+    title: 'Chính sách giao hàng',
+    content: 'Phạm vi giao hàng\n\nMIRA hỗ trợ giao hàng trên toàn quốc. Phí vận chuyển được hiển thị trong giỏ hàng và có thể thay đổi theo khu vực, kích thước kiện hàng hoặc chương trình ưu đãi.\n\nThời gian xử lý\n\nĐơn hàng được xác nhận trước khi chuyển sang chuẩn bị. Khi kiện hàng được bàn giao cho đơn vị vận chuyển, trạng thái và mã theo dõi sẽ được cập nhật để bạn tra cứu.\n\nNhận hàng\n\nVui lòng kiểm tra tình trạng bên ngoài của kiện hàng và liên hệ bộ phận chăm sóc khách hàng nếu phát hiện dấu hiệu hư hỏng hoặc giao nhầm.',
+  },
+  'chinh-sach-doi-tra': {
+    title: 'Chính sách đổi trả',
+    content: 'Thời hạn yêu cầu\n\nBạn có thể gửi yêu cầu đổi trả trong vòng 7 ngày kể từ khi đơn hàng được ghi nhận đã giao.\n\nĐiều kiện áp dụng\n\nSản phẩm cần còn đầy đủ phụ kiện, quà tặng và chứng từ mua hàng. MIRA tiếp nhận các trường hợp sản phẩm lỗi, hư hỏng khi giao hoặc không đúng với đơn đã đặt.\n\nQuy trình xử lý\n\nGửi yêu cầu từ trang đơn hàng hoặc liên hệ bộ phận chăm sóc khách hàng. Sau khi kiểm tra điều kiện, MIRA sẽ hướng dẫn gửi lại sản phẩm và thông báo phương án đổi hoặc hoàn tiền phù hợp.',
+  },
+  'chinh-sach-bao-mat': {
+    title: 'Chính sách quyền riêng tư',
+    content: 'Thông tin MIRA thu thập\n\nMIRA có thể thu thập thông tin tài khoản, liên hệ, địa chỉ nhận hàng, nội dung đơn hàng và lịch sử hỗ trợ khi bạn sử dụng dịch vụ.\n\nMục đích sử dụng\n\nThông tin được dùng để xử lý đơn, giao hàng, chăm sóc khách hàng, cải thiện trải nghiệm và gửi nội dung tiếp thị khi bạn đồng ý.\n\nChia sẻ thông tin\n\nMIRA chỉ chia sẻ dữ liệu cần thiết với đối tác phục vụ đơn hàng, chẳng hạn đơn vị vận chuyển hoặc thanh toán, và theo yêu cầu hợp pháp của cơ quan có thẩm quyền.\n\nQuyền của bạn\n\nBạn có thể xem, cập nhật thông tin tài khoản hoặc liên hệ bộ phận chăm sóc khách hàng để yêu cầu hỗ trợ về dữ liệu cá nhân.',
+  },
+  'dieu-khoan-su-dung': {
+    title: 'Điều khoản sử dụng',
+    content: 'Sử dụng dịch vụ\n\nBạn đồng ý cung cấp thông tin đặt hàng chính xác, sử dụng website cho mục đích hợp pháp và chịu trách nhiệm bảo quản thông tin đăng nhập của mình.\n\nThông tin sản phẩm\n\nMIRA nỗ lực trình bày chính xác hình ảnh, mô tả, giá và tình trạng hàng. Một số khác biệt nhỏ về màu sắc có thể xuất hiện do thiết bị hiển thị.\n\nĐơn hàng\n\nĐơn hàng chỉ được xác nhận sau khi MIRA kiểm tra khả năng cung ứng và thông tin nhận hàng. MIRA sẽ thông báo nếu cần điều chỉnh hoặc không thể tiếp tục xử lý đơn.\n\nHỗ trợ\n\nNếu có thắc mắc về mua hàng, giao nhận hoặc đổi trả, vui lòng liên hệ bộ phận chăm sóc khách hàng để được hướng dẫn.',
+  },
 };
 
 type Props = { params: Promise<{ slug: string }> };
@@ -16,14 +28,26 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const fallback = fallbackPages[slug];
-  return { title: fallback?.title ?? 'Chính sách', description: fallback ? `Thông tin ${fallback.title.toLowerCase()} của Secure Commerce.` : undefined };
+  const policy = policyPages[slug];
+  return { title: policy?.title ?? 'Chính sách', description: policy ? `Thông tin ${policy.title.toLowerCase()} tại MIRA.` : undefined };
 }
 
 export default async function PolicyPage({ params }: Props) {
   const { slug } = await params;
-  let page: { slug: string; title: string; content: string; updatedAt: string } | undefined;
-  try { page = await serverApi().request('/content/page', { slug }); } catch { const fallback = fallbackPages[slug]; if (fallback) page = { slug, ...fallback, updatedAt: new Date('2026-08-11T00:00:00+07:00').toISOString() }; }
-  if (!page) notFound();
+  const localPolicy = policyPages[slug];
+  if (!localPolicy) notFound();
+
+  let page: { slug: string; title: string; content: string; updatedAt: string } = {
+    slug,
+    ...localPolicy,
+    updatedAt: new Date('2026-08-25T00:00:00+07:00').toISOString(),
+  };
+  try {
+    const remote = await serverApi().request<typeof page, { slug: string }>('/content/page', { slug });
+    if (remote.content.trim().length > 160 && !remote.content.includes('Nội dung mẫu')) page = remote;
+  } catch {
+    // Nội dung chuẩn đi kèm storefront vẫn khả dụng khi dịch vụ nội dung gián đoạn.
+  }
+
   return <><section className="page-hero"><div className="container page-hero-inner"><div className="breadcrumbs"><Link href="/">Trang chủ</Link><span>/</span><strong>{page.title}</strong></div></div></section><section className="section"><div className="container"><article className="policy-content"><h1>{page.title}</h1><p className="updated">Cập nhật: {formatDateTime(page.updatedAt)}</p><div className="policy-body">{page.content}</div></article></div></section></>;
 }

@@ -2,17 +2,22 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import type { Response } from 'express';
-import argon2 from 'argon2';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { AuthResult, AuthUserDto } from '@secure-commerce/contracts';
-import type { User } from '@prisma/client';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import { NotificationsService } from '../notifications/notifications.service.js';
-import type { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto.js';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
+import type { Response } from "express";
+import argon2 from "argon2";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import type { AuthResult, AuthUserDto } from "@secure-commerce/contracts";
+import type { User } from "@prisma/client";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
+import type {
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from "./auth.dto.js";
 
 interface RequestMeta {
   ipAddress?: string;
@@ -26,7 +31,10 @@ interface AuthBundle {
   user: AuthUserDto;
 }
 
-type SafeUser = Pick<User, 'id' | 'email' | 'phone' | 'name' | 'role' | 'status'>;
+type SafeUser = Pick<
+  User,
+  "id" | "email" | "phone" | "name" | "role" | "status"
+>;
 
 @Injectable()
 export class AuthService {
@@ -39,23 +47,33 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly notifications: NotificationsService,
   ) {
-    this.secureCookie = config.get<string>('COOKIE_SECURE', 'false') === 'true';
-    this.refreshDays = Number(config.get<string>('REFRESH_TOKEN_TTL_DAYS', '30'));
+    this.secureCookie = config.get<string>("COOKIE_SECURE", "false") === "true";
+    this.refreshDays = Number(
+      config.get<string>("REFRESH_TOKEN_TTL_DAYS", "30"),
+    );
   }
 
   async register(dto: RegisterDto, meta: RequestMeta): Promise<AuthBundle> {
     const existing = await this.prisma.user.findFirst({
-      where: { OR: [{ email: dto.email }, ...(dto.phone ? [{ phone: dto.phone }] : [])] },
+      where: {
+        OR: [
+          { email: dto.email },
+          ...(dto.phone ? [{ phone: dto.phone }] : []),
+        ],
+      },
       select: { id: true },
     });
     if (existing) {
-      throw new ConflictException({ code: 'ACCOUNT_EXISTS', message: 'Email hoặc số điện thoại đã được sử dụng.' });
+      throw new ConflictException({
+        code: "ACCOUNT_EXISTS",
+        message: "Email hoặc số điện thoại đã được sử dụng.",
+      });
     }
     const passwordHash = await this.hashPassword(dto.password);
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        phone: dto.phone,
+        ...(dto.phone ? { phone: dto.phone } : {}),
         name: dto.name,
         passwordHash,
       },
@@ -64,13 +82,23 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: RequestMeta): Promise<AuthBundle> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    const valid = user ? await argon2.verify(user.passwordHash, dto.password) : false;
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    const valid = user
+      ? await argon2.verify(user.passwordHash, dto.password)
+      : false;
     if (!user || !valid) {
-      throw new UnauthorizedException({ code: 'CREDENTIALS_INVALID', message: 'Email hoặc mật khẩu không đúng.' });
+      throw new UnauthorizedException({
+        code: "CREDENTIALS_INVALID",
+        message: "Email hoặc mật khẩu không đúng.",
+      });
     }
-    if (user.status !== 'ACTIVE') {
-      throw new UnauthorizedException({ code: 'ACCOUNT_LOCKED', message: 'Tài khoản đang bị khóa.' });
+    if (user.status !== "ACTIVE") {
+      throw new UnauthorizedException({
+        code: "ACCOUNT_LOCKED",
+        message: "Tài khoản đang bị khóa.",
+      });
     }
     return this.createSession(user, meta);
   }
@@ -78,6 +106,8 @@ export class AuthService {
   async refresh(rawRefreshToken: string | undefined): Promise<AuthBundle> {
     const parsed = parseRefreshToken(rawRefreshToken);
     if (!parsed) throw invalidRefresh();
+    const currentTokenHash = hashToken(parsed.secret);
+    const now = new Date();
     const session = await this.prisma.authSession.findUnique({
       where: { id: parsed.sessionId },
       include: { user: true },
@@ -85,23 +115,29 @@ export class AuthService {
     if (
       !session ||
       session.revokedAt ||
-      session.expiresAt <= new Date() ||
-      session.user.status !== 'ACTIVE' ||
-      !safeEqual(session.refreshTokenHash, hashToken(parsed.secret))
+      session.expiresAt <= now ||
+      session.user.status !== "ACTIVE" ||
+      !safeEqual(session.refreshTokenHash, currentTokenHash)
     ) {
       throw invalidRefresh();
     }
 
-    const nextSecret = randomBytes(32).toString('base64url');
+    const nextSecret = randomBytes(32).toString("base64url");
     const expiresAt = addDays(new Date(), this.refreshDays);
-    await this.prisma.authSession.update({
-      where: { id: session.id },
+    const rotated = await this.prisma.authSession.updateMany({
+      where: {
+        id: session.id,
+        refreshTokenHash: currentTokenHash,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
       data: { refreshTokenHash: hashToken(nextSecret), expiresAt },
     });
+    if (rotated.count !== 1) throw invalidRefresh();
     return {
       accessToken: await this.signAccessToken(session.user, session.id),
       refreshToken: `${session.id}.${nextSecret}`,
-      csrfToken: randomBytes(24).toString('base64url'),
+      csrfToken: randomBytes(24).toString("base64url"),
       user: toAuthUser(session.user),
     };
   }
@@ -116,9 +152,11 @@ export class AuthService {
   }
 
   async requestPasswordReset(dto: ForgotPasswordDto): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) return;
-    const rawToken = randomBytes(32).toString('base64url');
+    const rawToken = randomBytes(32).toString("base64url");
     await this.prisma.passwordResetToken.create({
       data: {
         userId: user.id,
@@ -126,8 +164,13 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
-    const webOrigin = this.config.get<string>('WEB_ORIGIN', 'http://localhost:3000').split(',')[0];
-    await this.notifications.enqueueEmail(user.email, 'password-reset', {
+    const webOrigin =
+      this.config
+        .get<string>("WEB_ORIGIN", "http://localhost:3000")
+        .split(",")
+        .map((value) => value.trim())
+        .find(Boolean) ?? "http://localhost:3000";
+    await this.notifications.enqueueEmail(user.email, "password-reset", {
       name: user.name,
       resetUrl: `${webOrigin}/dat-lai-mat-khau?token=${encodeURIComponent(rawToken)}`,
       expiresInMinutes: 30,
@@ -136,14 +179,25 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const tokenHash = hashToken(dto.token);
-    const token = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    const token = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
     if (!token || token.usedAt || token.expiresAt <= new Date()) {
-      throw new UnauthorizedException({ code: 'RESET_TOKEN_INVALID', message: 'Token đặt lại mật khẩu không hợp lệ.' });
+      throw new UnauthorizedException({
+        code: "RESET_TOKEN_INVALID",
+        message: "Token đặt lại mật khẩu không hợp lệ.",
+      });
     }
     const passwordHash = await this.hashPassword(dto.password);
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: token.userId }, data: { passwordHash } }),
-      this.prisma.passwordResetToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }),
+      this.prisma.user.update({
+        where: { id: token.userId },
+        data: { passwordHash },
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: token.id },
+        data: { usedAt: new Date() },
+      }),
       this.prisma.authSession.updateMany({
         where: { userId: token.userId, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -152,51 +206,54 @@ export class AuthService {
   }
 
   setAuthCookies(response: Response, bundle: AuthBundle): AuthResult {
-    response.cookie('access_token', bundle.accessToken, {
+    response.cookie("access_token", bundle.accessToken, {
       httpOnly: true,
       secure: this.secureCookie,
-      sameSite: 'lax',
-      path: '/',
+      sameSite: "lax",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
-    response.cookie('refresh_token', bundle.refreshToken, {
+    response.cookie("refresh_token", bundle.refreshToken, {
       httpOnly: true,
       secure: this.secureCookie,
-      sameSite: 'strict',
-      path: '/api/v1/auth',
+      sameSite: "strict",
+      path: "/api/v1/auth",
       maxAge: this.refreshDays * 24 * 60 * 60 * 1000,
     });
-    response.cookie('csrf_token', bundle.csrfToken, {
+    response.cookie("csrf_token", bundle.csrfToken, {
       httpOnly: false,
       secure: this.secureCookie,
-      sameSite: 'strict',
-      path: '/',
+      sameSite: "strict",
+      path: "/",
       maxAge: this.refreshDays * 24 * 60 * 60 * 1000,
     });
     return { user: bundle.user, csrfToken: bundle.csrfToken };
   }
 
   clearAuthCookies(response: Response): void {
-    response.clearCookie('access_token', { path: '/' });
-    response.clearCookie('refresh_token', { path: '/api/v1/auth' });
-    response.clearCookie('csrf_token', { path: '/' });
+    response.clearCookie("access_token", { path: "/" });
+    response.clearCookie("refresh_token", { path: "/api/v1/auth" });
+    response.clearCookie("csrf_token", { path: "/" });
   }
 
-  private async createSession(user: SafeUser, meta: RequestMeta): Promise<AuthBundle> {
-    const secret = randomBytes(32).toString('base64url');
+  private async createSession(
+    user: SafeUser,
+    meta: RequestMeta,
+  ): Promise<AuthBundle> {
+    const secret = randomBytes(32).toString("base64url");
     const session = await this.prisma.authSession.create({
       data: {
         userId: user.id,
         refreshTokenHash: hashToken(secret),
-        userAgent: meta.userAgent,
-        ipAddress: meta.ipAddress,
+        ...(meta.userAgent ? { userAgent: meta.userAgent } : {}),
+        ...(meta.ipAddress ? { ipAddress: meta.ipAddress } : {}),
         expiresAt: addDays(new Date(), this.refreshDays),
       },
     });
     return {
       accessToken: await this.signAccessToken(user, session.id),
       refreshToken: `${session.id}.${secret}`,
-      csrfToken: randomBytes(24).toString('base64url'),
+      csrfToken: randomBytes(24).toString("base64url"),
       user: toAuthUser(user),
     };
   }
@@ -204,7 +261,9 @@ export class AuthService {
   private signAccessToken(user: SafeUser, sessionId: string): Promise<string> {
     return this.jwt.signAsync(
       { sub: user.id, sid: sessionId, email: user.email, role: user.role },
-      { expiresIn: this.config.get<string>('ACCESS_TOKEN_TTL', '15m') as never },
+      {
+        expiresIn: this.config.get<string>("ACCESS_TOKEN_TTL", "15m") as never,
+      },
     );
   }
 
@@ -219,7 +278,7 @@ export class AuthService {
 }
 
 function hashToken(value: string): string {
-  return createHash('sha256').update(value).digest('hex');
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -228,15 +287,20 @@ function safeEqual(left: string, right: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function parseRefreshToken(value: string | undefined): { sessionId: string; secret: string } | null {
+function parseRefreshToken(
+  value: string | undefined,
+): { sessionId: string; secret: string } | null {
   if (!value) return null;
-  const dot = value.indexOf('.');
+  const dot = value.indexOf(".");
   if (dot <= 0 || dot === value.length - 1) return null;
   return { sessionId: value.slice(0, dot), secret: value.slice(dot + 1) };
 }
 
 function invalidRefresh(): UnauthorizedException {
-  return new UnauthorizedException({ code: 'REFRESH_TOKEN_INVALID', message: 'Refresh token không hợp lệ.' });
+  return new UnauthorizedException({
+    code: "REFRESH_TOKEN_INVALID",
+    message: "Refresh token không hợp lệ.",
+  });
 }
 
 function addDays(date: Date, days: number): Date {
@@ -244,5 +308,11 @@ function addDays(date: Date, days: number): Date {
 }
 
 function toAuthUser(user: SafeUser): AuthUserDto {
-  return { id: user.id, email: user.email, phone: user.phone, name: user.name, role: user.role };
+  return {
+    id: user.id,
+    email: user.email,
+    phone: user.phone,
+    name: user.name,
+    role: user.role,
+  };
 }

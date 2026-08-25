@@ -15,7 +15,7 @@ export function ProductCard({ product }: { product: ProductSummaryDto }) {
       <Image src={product.imageUrl} alt={product.imageAlt} width={520} height={420} className="product-image" />
     </Link>
     <div className="product-card-body">
-      <div className="product-meta"><span>{product.category.name}</span><span>{product.brand?.name ?? 'Chính hãng'}</span></div>
+      <div className="product-meta"><span>{product.category.name}</span><span>{product.brand?.name ?? 'Tuyển chọn'}</span></div>
       <h3><Link href={`/san-pham/${product.slug}`}>{product.name}</Link></h3>
       <p>{product.shortDescription}</p>
       <div className="product-price-row">

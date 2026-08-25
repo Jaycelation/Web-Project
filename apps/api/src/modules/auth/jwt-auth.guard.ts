@@ -1,5 +1,6 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import type { Request } from 'express';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {}
@@ -7,7 +8,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {}
 @Injectable()
 export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {
-    const request = context.switchToHttp().getRequest<Express.Request>();
+    const request = context.switchToHttp().getRequest<Request>();
     if (!request.cookies?.access_token) return true;
     return super.canActivate(context);
   }

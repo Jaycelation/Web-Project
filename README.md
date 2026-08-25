@@ -1,11 +1,11 @@
-# Secure Commerce
+# MIRA Commerce
 
 Monorepo TypeScript cho website thương mại điện tử MVP theo kiến trúc **modular monolith**, gồm:
 
 - **Frontend:** Next.js App Router.
 - **Backend:** NestJS.
 - **Database:** PostgreSQL + Prisma.
-- **Application-layer encryption:** RSA-OAEP-SHA-256 + AES-256-GCM cho request/response nghiệp vụ.
+- **Application-layer protection:** JWE `RSA-OAEP-256` + `A256GCM`; response được ký JWS `PS256` trước khi mã hóa.
 - **Luồng thanh toán MVP:** COD và chuyển khoản ngân hàng.
 
 > Lớp mã hóa ứng dụng không thay thế TLS. Production vẫn bắt buộc HTTPS, quản lý khóa bằng secret manager/HSM/KMS và pin/verify server public key qua một kênh tin cậy.
@@ -36,17 +36,19 @@ Monorepo TypeScript cho website thương mại điện tử MVP theo kiến trú
 
 ### Kiểm soát bảo mật
 
-- Envelope v1: **RSA-OAEP-256** bọc khóa AES; **A256GCM** mã hóa body.
-- AAD ràng buộc direction, method, path, requestId, timestamp, nonce và client key.
-- Response được mã hóa về public key tạm của browser và bind với requestId + request nonce.
-- Replay window + nonce cache; server key ID và cơ chế refresh khi xoay khóa.
+- JWE v2 Flattened JSON: **RSA-OAEP-256** + **A256GCM**, exact protected-header/algorithm allow-list.
+- Metadata được mã hóa ràng buộc direction, method, path, requestId, timestamp, nonce, client key, CSRF và idempotency header.
+- Response được ký bằng key `PS256` riêng rồi mã hóa về public key tạm của browser.
+- Response bind với requestId, request nonce, HTTP status, timestamp và server key ID.
+- Dual-stack migration: server nhận v1/v2; storefront dùng v2 và không tự downgrade.
+- Replay window + nonce cache; descriptor có encryption/signing key ID, fingerprint và cơ chế refresh khi xoay khóa.
 - Cookie HttpOnly, refresh token rotation, Argon2id, CSRF double-submit, Origin allow-list.
 - RBAC CUSTOMER/STAFF/ADMIN, throttling, validation whitelist, Helmet và CSP.
 - Server tự tính lại giá, coupon, phí vận chuyển và tồn kho.
 - Checkout transaction `Serializable` + unique idempotency scope/key.
 - Inventory reservation, release/restock và lịch sử trạng thái đơn.
 
-Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/SCOPE.md](docs/SCOPE.md).
+Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/SCOPE.md](docs/SCOPE.md) và [checklist triển khai](docs/IMPLEMENTATION-CHECKLIST.md).
 
 ## 2. Chạy nhanh bằng Docker Compose
 
@@ -64,7 +66,7 @@ Truy cập:
 - API health: `http://localhost:4000/api/v1/health`
 - Server public key: `http://localhost:4000/api/v1/crypto/server-key`
 
-Container API tự tạo RSA development key trong volume, đồng bộ schema và seed dữ liệu. Cơ chế `db push` này chỉ dành cho demo/MVP; production phải dùng migration được review và quy trình deploy riêng.
+Compose khởi động theo thứ tự `db → migrate → seed → api → web`. Schema được áp dụng bằng migration bất biến; seed là one-shot service idempotent. API tự tạo hai RSA development key pair (encryption/signing) trong volume. Stack Compose mặc định chỉ dành cho local/demo; production phải cung cấp khóa/secret riêng và không chạy demo seed.
 
 ## 3. Chạy local
 
@@ -72,10 +74,11 @@ Yêu cầu: Node.js 22+, npm 10+, PostgreSQL 16+.
 
 ```bash
 cp .env.example .env
-npm install
+nvm use
+npm ci
 npm run crypto:keys
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 npm run dev
 ```
@@ -85,16 +88,16 @@ Nếu PostgreSQL chạy trong Docker nhưng app chạy local:
 ```bash
 docker compose up -d db
 npm run db:generate
-npm run db:push
+npm run db:deploy
 npm run db:seed
 npm run dev
 ```
 
 ## 4. Tài khoản seed
 
-| Vai trò | Email | Mật khẩu |
-|---|---|---|
-| Admin | `admin@securecommerce.local` | `Admin@12345` |
+| Vai trò  | Email                           | Mật khẩu         |
+| -------- | ------------------------------- | ---------------- |
+| Admin    | `admin@securecommerce.local`    | `Admin@12345`    |
 | Customer | `customer@securecommerce.local` | `Customer@12345` |
 
 Các credential trên chỉ dùng cho môi trường demo. Hãy xóa hoặc thay đổi trước khi expose hệ thống.
@@ -107,12 +110,15 @@ Coupon demo: `WELCOME10`.
 npm run dev            # API + web
 npm run build          # Build toàn monorepo
 npm run typecheck      # Typecheck workspace
-npm test               # Core acceptance + workspace tests
+npm test               # Core + security + workspace tests
 npm run test:core      # Crypto, pricing, stock, order state machine
-npm run test:api       # Smoke test API đang chạy
+npm run test:security  # Replay cache, CSRF và production config
+npm run test:workspaces # Test scripts riêng của API/web
+npm run test:api       # Smoke/acceptance API đang chạy
+npm run verify         # Typecheck + build + test + audit + Compose config
 npm run db:generate
-npm run db:push
 npm run db:migrate
+npm run db:deploy
 npm run db:seed
 npm run crypto:keys
 ```
@@ -149,41 +155,30 @@ secure-commerce/
 
 Các bounded module của API: `auth`, `account`, `catalog`, `cart`, `checkout`, `orders`, `admin`, `content`, `marketing`, `notifications`, cùng `infrastructure/crypto-envelope` và `infrastructure/prisma`.
 
-## 7. Envelope protocol v1
+## 7. JWE protocol v2 và cửa sổ tương thích v1
 
-Request nghiệp vụ có dạng khái quát:
+Storefront gửi RFC 7516 Flattened JWE JSON:
 
 ```json
 {
-  "version": 1,
-  "keyId": "server-key-id",
-  "algorithm": "RSA-OAEP-256",
-  "contentEncryption": "A256GCM",
-  "encryptedKey": "base64url(RSA-OAEP(aesKey))",
-  "iv": "base64url(12-byte-iv)",
-  "ciphertext": "base64url(ciphertext+gcm-tag)",
-  "aad": {
-    "version": 1,
-    "direction": "request",
-    "method": "POST",
-    "path": "/api/v1/catalog/search",
-    "requestId": "uuid",
-    "timestamp": 0,
-    "nonce": "random-base64url",
-    "clientKeyId": "sha256-spki",
-    "clientPublicKey": { "kty": "RSA", "n": "...", "e": "AQAB" }
-  }
+  "protected": "base64url({alg,enc,kid,typ,cty})",
+  "encrypted_key": "base64url(RSA-OAEP-256(cek))",
+  "iv": "base64url(96-bit-iv)",
+  "ciphertext": "base64url(encrypted-payload)",
+  "tag": "base64url(128-bit-gcm-tag)"
 }
 ```
 
 Luồng:
 
-1. Browser tải public key của server qua HTTPS và kiểm tra fingerprint pin nếu được cấu hình.
+1. Browser tải encryption/signing public key qua HTTPS và kiểm tra hai fingerprint pin nếu được cấu hình.
 2. Browser tạo RSA-OAEP key pair tạm cho response.
-3. Mỗi request tạo AES-256 key + IV mới; AES key được bọc bằng server RSA key.
-4. Server giải mã, kiểm tra AAD route/timestamp/fingerprint/nonce, rồi chạy validation và nghiệp vụ.
-5. Server tạo AES key mới cho response, bọc key đó bằng public key tạm của browser.
-6. Browser kiểm tra requestId, request nonce và HTTP status sau khi giải mã.
+3. Request metadata/body được mã hóa bằng JWE `RSA-OAEP-256` + `A256GCM` với CEK/IV mới.
+4. Server decrypt/tag-verify, kiểm tra exact JOSE profile, route/header/timestamp/key/replay rồi chạy nghiệp vụ.
+5. Server ký payload response bằng signing private key `PS256`, sau đó mã hóa Compact JWS về public key browser.
+6. Browser decrypt JWE, verify JWS, rồi kiểm tra requestId, request nonce, status, timestamp và key ID trước khi dùng body.
+
+`x-secure-envelope: v2` là mặc định. Server giữ `v1` trong giai đoạn migration khi `CRYPTO_ACCEPT_V1=true`; client v2 không tự downgrade. Sau khi telemetry xác nhận không còn client cũ, đặt biến này thành `false` trước khi xóa code v1.
 
 Endpoint plaintext duy nhất: `GET /health` và `GET /crypto/server-key`. Tất cả endpoint nghiệp vụ bị `SecureEnvelopeGuard` bắt buộc envelope.
 
@@ -198,9 +193,15 @@ Xem đầy đủ trong `.env.example`.
 - `CRYPTO_KEY_ID`
 - `CRYPTO_PRIVATE_KEY_PATH`
 - `CRYPTO_PUBLIC_KEY_PATH`
+- `CRYPTO_SIGNING_KEY_ID`
+- `CRYPTO_SIGNING_PRIVATE_KEY_PATH`
+- `CRYPTO_SIGNING_PUBLIC_KEY_PATH`
+- `CRYPTO_ACCEPT_V1`
 - `CRYPTO_AUTO_GENERATE`
+- `ALLOW_DEMO_SEED`
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256`
+- `NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256`
 - `BASE_SHIPPING_FEE`, `FREE_SHIPPING_THRESHOLD`
 - `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`
 
@@ -209,28 +210,34 @@ Xem đầy đủ trong `.env.example`.
 - Notification dùng **outbox**; chưa có worker SMTP/SMS thật.
 - CARD/EWALLET có model mở rộng nhưng checkout UI/API chỉ cho COD và chuyển khoản.
 - Replay cache là in-memory, phù hợp một API instance. Scale ngang cần Redis hoặc durable store dùng chung.
+- JWE dùng long-term RSA key nên không tạo forward secrecy; TLS 1.3 vẫn bắt buộc.
+- Legacy v1 còn được giữ tạm để tương thích và phải có telemetry/deprecation window trước khi tắt.
 - Chưa tích hợp carrier, payment gateway callback, object storage, antivirus upload hoặc ERP/WMS.
 - Không lưu dữ liệu thẻ.
 - Dashboard là operational dashboard cơ bản, chưa phải data warehouse/BI.
-- `db push` và seed trong Docker Compose thuận tiện cho demo, không phải quy trình migration production.
+- Migration ban đầu đã có trong source; quy trình review/backup/rollback production vẫn phải được thiết kế theo môi trường triển khai thực tế.
+- Demo seed chỉ được phép mặc định ở development; production từ chối seed nếu không bật safety latch rõ ràng.
 
 ## 10. Trước khi triển khai production
 
 Tối thiểu phải thực hiện các mục trong [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md), đặc biệt:
 
-- TLS termination + HSTS; pin fingerprint hoặc ký descriptor public key.
-- KMS/HSM/secret manager; key rotation có version và rollback.
+- TLS termination + HSTS; cấp cả encryption/signing fingerprint pin qua kênh tin cậy.
+- KMS/HSM/secret manager cho hai private key; key rotation có version và rollback.
 - Migration bất biến, backup/restore drill và observability.
 - Redis replay cache khi nhiều instance.
 - SMTP/provider thật với retry worker; payment callback signature verification nếu tích hợp cổng.
 - SAST, dependency audit, DAST, test race condition và penetration test độc lập.
 - Thay toàn bộ secret/demo credential và rà soát pháp lý các trang chính sách.
 
-## 11. Trạng thái kiểm thử của gói bàn giao
+## 11. Trạng thái kiểm thử hiện tại
 
-Trong môi trường tạo gói:
+Đã xác minh trực tiếp ngày **2026-08-25** bằng Node.js 22 và Docker Compose:
 
-- Core acceptance: **6/6 pass**.
-- Parse check: **124 tệp TypeScript/TSX, 0 parse error** trước khi thêm tài liệu/tài nguyên.
-- Full `npm install/build/typecheck` không chạy được tại môi trường đóng gói vì DNS tới npm registry không khả dụng. Hãy chạy lại các lệnh ở mục 5 trong môi trường có mạng trước khi deploy.
+- `npm run typecheck`, full monorepo build và `npm audit`: pass; audit không có advisory tại thời điểm chạy.
+- Core + security acceptance: **26/26 pass**, gồm JWE/JWS tamper, signature/binding, no-downgrade, replay/CSRF/production-config/session controls.
+- Docker images `migrate`, `seed`, `api`, `web`: build thành công; migration và seed exit 0; API/web healthy.
+- API acceptance pass: JWE v2 + PS256-signed response, legacy v1 smoke, auth, refresh rotation, stale-token rejection, CSRF và RBAC; write record bao gồm COD checkout, idempotency và guest tracking.
+- Chromium production-container login pass tới `/tai-khoan`; request/response dùng v2 và không có console/page error.
 
+Chi tiết lệnh và kết quả: [docs/TEST-RESULTS.txt](docs/TEST-RESULTS.txt). Kết quả này xác nhận baseline local/MVP, không thay thế production load test, DAST hoặc pentest độc lập.

@@ -10,14 +10,20 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
+  const query = single(params.q);
+  const category = single(params.category);
+  const brand = single(params.brand);
+  const minPrice = numberValue(params.minPrice);
+  const maxPrice = numberValue(params.maxPrice);
+  const sort = single(params.sort);
   const filters: CatalogSearchInput = {
-    ...(single(params.q) ? { query: single(params.q) } : {}),
-    ...(single(params.category) ? { category: single(params.category) } : {}),
-    ...(single(params.brand) ? { brand: single(params.brand) } : {}),
-    ...(numberValue(params.minPrice) !== undefined ? { minPrice: numberValue(params.minPrice) } : {}),
-    ...(numberValue(params.maxPrice) !== undefined ? { maxPrice: numberValue(params.maxPrice) } : {}),
+    ...(query ? { query } : {}),
+    ...(category ? { category } : {}),
+    ...(brand ? { brand } : {}),
+    ...(minPrice !== undefined ? { minPrice } : {}),
+    ...(maxPrice !== undefined ? { maxPrice } : {}),
     ...(single(params.inStock) === 'true' ? { inStock: true } : {}),
-    ...(isSort(single(params.sort)) ? { sort: single(params.sort) as CatalogSearchInput['sort'] } : { sort: 'newest' }),
+    ...(isSort(sort) ? { sort: sort as NonNullable<CatalogSearchInput['sort']> } : { sort: 'newest' }),
     page: Math.max(1, numberValue(params.page) ?? 1),
     pageSize: 12,
   };
@@ -25,7 +31,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   try { initial = await searchCatalog(filters); } catch { initial = { ...fallbackCatalog, items: applyFallback(fallbackCatalog.items, filters), total: applyFallback(fallbackCatalog.items, filters).length }; }
 
   return <>
-    <section className="page-hero"><div className="container page-hero-inner"><div className="breadcrumbs"><Link href="/">Trang chủ</Link><span>/</span><strong>Sản phẩm</strong></div><h1>Khám phá sản phẩm</h1><p>Tìm theo tên, SKU, danh mục hoặc thương hiệu. Giá và tồn kho được xác thực lại ở server khi checkout.</p></div></section>
+    <section className="page-hero"><div className="container page-hero-inner"><div className="breadcrumbs"><Link href="/">Trang chủ</Link><span>/</span><strong>Sản phẩm</strong></div><h1>Khám phá sản phẩm</h1><p>Tìm thiết bị phù hợp theo danh mục, thương hiệu và khoảng giá bạn mong muốn.</p></div></section>
     <section className="section"><div className="container"><CatalogBrowser initial={initial} initialFilters={filters} /></div></section>
   </>;
 }

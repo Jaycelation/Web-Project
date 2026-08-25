@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 
 @Injectable()
 export class OriginGuard implements CanActivate {
@@ -16,7 +17,7 @@ export class OriginGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Express.Request>();
+    const request = context.switchToHttp().getRequest<Request>();
     const origin = request.headers.origin;
     if (!origin || request.method === 'OPTIONS') return true;
     if (!this.allowedOrigins.has(origin)) {

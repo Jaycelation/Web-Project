@@ -3,26 +3,31 @@
 ## A. Tự động
 
 ```bash
-npm install
-npm run build
-npm run typecheck
-npm test
+nvm use
+npm ci
+npm run verify
+docker compose build migrate seed api web
+docker compose up -d
 ```
 
 Sau khi API + DB chạy:
 
 ```bash
 API_BASE_URL=http://localhost:4000/api/v1 npm run test:api
+ACCEPTANCE_WRITE=1 API_BASE_URL=http://localhost:4000/api/v1 npm run test:api
 ```
 
 Kỳ vọng:
 
-- health và descriptor server key trả hợp lệ;
-- encrypted catalog search/detail/quote thành công;
-- response requestId/nonce/status binding được client kiểm tra;
+- health và descriptor chứa đúng encryption/signing public key, không có private field;
+- JWE v2 catalog search/detail/quote và response JWS `PS256` thành công;
+- một legacy v1 smoke vẫn pass trong cửa sổ migration;
+- response requestId/nonce/status/key/timestamp binding được client kiểm tra;
 - login seed customer và `/auth/me` hoạt động;
-- route admin từ customer bị chặn;
-- core crypto tamper/pricing/stock/state-machine đều pass.
+- refresh token rotate, token cũ bị từ chối và refresh-only cookie vẫn bắt buộc CSRF;
+- route admin từ customer bị chặn nhưng admin truy cập dashboard được;
+- write acceptance chỉ tạo một đơn khi retry cùng idempotency key và tra cứu guest order được;
+- core JOSE tamper/signature/binding/no-downgrade, pricing/stock/state-machine, replay cache và production config đều pass.
 
 ## B. Luồng người dùng
 
@@ -45,16 +50,18 @@ Kỳ vọng:
 - Cancel confirmed/preparing restock đúng lượng.
 - Mọi thay đổi có `InventoryMovement` và `OrderStatusHistory`.
 
-## D. Bảo mật envelope
+## D. JWE/JWS và legacy envelope
 
 - Request plaintext tới route nghiệp vụ bị `SECURE_ENVELOPE_REQUIRED`.
-- Sửa một byte ciphertext hoặc tag bị từ chối.
-- Sửa AAD method/path bị từ chối.
+- JWE v2 wire chỉ có `protected`, `encrypted_key`, `iv`, `ciphertext`, `tag` và media type `application/jose+json`.
+- Sửa từng trường JWE, protected header hoặc thuật toán bị từ chối.
+- Sửa method/path, CSRF hoặc idempotency header so với metadata được mã hóa bị từ chối.
 - Replay cùng client key + nonce trong TTL bị từ chối.
 - Timestamp ngoài clock-skew bị từ chối.
 - Client key fingerprint sai bị từ chối.
-- Response sai requestId/requestNonce/status bị client từ chối.
-- Fingerprint pin sai làm client dừng trước khi gửi dữ liệu nghiệp vụ.
+- Response không có JWS, ký sai key hoặc sai requestId/requestNonce/status/server key bị client từ chối.
+- Encryption/signing fingerprint pin sai làm client dừng trước khi gửi dữ liệu nghiệp vụ.
+- Client v2 không tự downgrade; v1 chỉ hoạt động khi `CRYPTO_ACCEPT_V1=true`.
 
 ## E. Auth/RBAC/CSRF
 
@@ -72,8 +79,8 @@ Kỳ vọng:
 Không go-live cho đến khi hoàn tất:
 
 - [ ] HTTPS/HSTS và reverse proxy hardening.
-- [ ] KMS/HSM/secret manager, key rotation drill.
-- [ ] Fingerprint pin hoặc signed key descriptor.
+- [ ] KMS/HSM/secret manager cho hai private key, key rotation drill.
+- [ ] Cấp cả encryption và signing fingerprint pin trong production build.
 - [ ] Redis/durable replay cache nếu có từ hai API instance.
 - [ ] Migration được review; backup/restore drill.
 - [ ] SMTP/SMS worker và retry/dead-letter monitoring.
@@ -85,3 +92,4 @@ Không go-live cho đến khi hoàn tất:
 - [ ] Xóa seed credentials; rotate toàn bộ secret.
 - [ ] Rà soát pháp lý privacy/terms/returns/invoice/tax.
 - [ ] Incident response và rollback runbook.
+- [ ] Telemetry và lịch retirement v1; sau đó đặt `CRYPTO_ACCEPT_V1=false`.

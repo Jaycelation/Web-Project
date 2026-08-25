@@ -3,11 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { apiErrorMessage, browserApi } from '@/lib/api';
+import { apiErrorMessage, browserRequest } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { useCart } from './cart-provider';
 import { EmptyState, LoadingState } from './loading-state';
-import { LockIcon } from './icons';
+import { TruckIcon } from './icons';
 
 interface Quote { subtotal: number; discount: number; shippingFee: number; total: number }
 const COUPON_KEY = 'secure-commerce-coupon-v1';
@@ -32,7 +32,7 @@ export function CartView() {
     const timer = window.setTimeout(async () => {
       setLoadingQuote(true);
       try {
-        const result = await browserApi().request<Quote>('/checkout/quote', { items: payloadItems, ...(coupon ? { couponCode: coupon } : {}) });
+        const result = await browserRequest<Quote>('/checkout/quote', { items: payloadItems, ...(coupon ? { couponCode: coupon } : {}) });
         setQuote(result);
         setMessage('');
       } catch (error) {
@@ -70,10 +70,10 @@ export function CartView() {
       <div className="summary-row"><span>Phí vận chuyển</span><strong>{totals.shippingFee ? formatMoney(totals.shippingFee) : 'Miễn phí'}</strong></div>
       <div className="coupon-box"><input aria-label="Mã giảm giá" value={couponInput} onChange={(event) => setCouponInput(event.target.value)} placeholder="WELCOME10" /><button type="button" onClick={applyCoupon}>Áp dụng</button></div>
       {message && <div className="alert alert-error">{message}</div>}
-      {coupon && !message && <div className="alert alert-success">Mã {coupon} đã được server xác minh.</div>}
+      {coupon && !message && <div className="alert alert-success">Đã áp dụng mã {coupon}.</div>}
       <div className="summary-row summary-total"><span>Tổng dự kiến</span><strong>{loadingQuote ? '…' : formatMoney(totals.total)}</strong></div>
       <Link className="button button-primary button-block" href="/thanh-toan">Tiến hành thanh toán</Link>
-      <p className="summary-note"><LockIcon /> Tổng cuối cùng được API tính lại trong transaction ngay trước khi tạo đơn.</p>
+      <p className="summary-note"><TruckIcon /> Phí vận chuyển và ưu đãi được cập nhật trước khi đặt hàng.</p>
     </aside>
   </div>;
 }

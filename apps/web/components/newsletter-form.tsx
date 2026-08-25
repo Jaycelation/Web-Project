@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { apiErrorMessage, browserApi } from '@/lib/api';
+import { apiErrorMessage, browserRequest } from '@/lib/api';
 
 export function NewsletterForm() {
   const [email, setEmail] = useState('');
@@ -12,7 +12,7 @@ export function NewsletterForm() {
     event.preventDefault();
     setStatus('loading');
     try {
-      const result = await browserApi().request<{ message: string }>('/marketing/subscribe', { email, consent: true });
+      const result = await browserRequest<{ message: string }>('/marketing/subscribe', { email, consent: true });
       setStatus('success');
       setMessage(result.message);
       setEmail('');

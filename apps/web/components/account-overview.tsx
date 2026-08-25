@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiErrorMessage, browserApi } from '@/lib/api';
+import { apiErrorMessage, browserRequest } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { useAuth } from './auth-provider';
 import { LoadingState } from './loading-state';
@@ -16,18 +16,18 @@ export function AccountOverview() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const load = async () => { setLoading(true); try { setData(await browserApi().request('/account/overview', {})); } catch (requestError) { setError(apiErrorMessage(requestError)); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); try { setData(await browserRequest('/account/overview', {})); } catch (requestError) { setError(apiErrorMessage(requestError)); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, []);
 
   const updateProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = new FormData(event.currentTarget); setError('');
-    try { await browserApi().request('/account/profile/update', { name: String(form.get('name')), phone: String(form.get('phone') ?? '') || undefined }); setMessage('Đã cập nhật hồ sơ.'); await Promise.all([load(), refreshMe()]); } catch (requestError) { setError(apiErrorMessage(requestError)); }
+    try { await browserRequest('/account/profile/update', { name: String(form.get('name')), phone: String(form.get('phone') ?? '') || undefined }); setMessage('Đã cập nhật hồ sơ.'); await Promise.all([load(), refreshMe()]); } catch (requestError) { setError(apiErrorMessage(requestError)); }
   };
   const saveAddress = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = new FormData(event.currentTarget); setError('');
-    try { await browserApi().request('/account/addresses/save', { label: String(form.get('label')), fullName: String(form.get('fullName')), phone: String(form.get('phone')), line1: String(form.get('line1')), ward: String(form.get('ward') ?? '') || undefined, district: String(form.get('district')), province: String(form.get('province')), country: 'VN', isDefault: form.get('isDefault') === 'on' }); event.currentTarget.reset(); setMessage('Đã lưu địa chỉ.'); await load(); } catch (requestError) { setError(apiErrorMessage(requestError)); }
+    try { await browserRequest('/account/addresses/save', { label: String(form.get('label')), fullName: String(form.get('fullName')), phone: String(form.get('phone')), line1: String(form.get('line1')), ward: String(form.get('ward') ?? '') || undefined, district: String(form.get('district')), province: String(form.get('province')), country: 'VN', isDefault: form.get('isDefault') === 'on' }); event.currentTarget.reset(); setMessage('Đã lưu địa chỉ.'); await load(); } catch (requestError) { setError(apiErrorMessage(requestError)); }
   };
-  const removeAddress = async (addressId: string) => { if (!confirm('Xóa địa chỉ này?')) return; try { await browserApi().request('/account/addresses/delete', { addressId }); await load(); } catch (requestError) { setError(apiErrorMessage(requestError)); } };
+  const removeAddress = async (addressId: string) => { if (!confirm('Xóa địa chỉ này?')) return; try { await browserRequest('/account/addresses/delete', { addressId }); await load(); } catch (requestError) { setError(apiErrorMessage(requestError)); } };
 
   if (loading && !data) return <LoadingState />;
   if (!data) return <div className="alert alert-error">{error || 'Không tải được tài khoản.'}</div>;

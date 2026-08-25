@@ -3,11 +3,11 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
-} from '@nestjs/common';
-import type { Request, Response } from 'express';
-import { from, mergeMap, type Observable } from 'rxjs';
-import { SECURE_ENVELOPE_HEADER, SECURE_ENVELOPE_HEADER_VALUE } from '@secure-commerce/crypto-envelope';
-import { CryptoEnvelopeService } from './crypto-envelope.service.js';
+} from "@nestjs/common";
+import type { Request, Response } from "express";
+import { from, mergeMap, type Observable } from "rxjs";
+import { SECURE_ENVELOPE_HEADER } from "@secure-commerce/crypto-envelope";
+import { CryptoEnvelopeService } from "./crypto-envelope.service.js";
 
 @Injectable()
 export class SecureResponseInterceptor implements NestInterceptor {
@@ -20,12 +20,24 @@ export class SecureResponseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       mergeMap((data) =>
-        from(this.cryptoEnvelope.encryptOutgoing(request.secureContext!, data, response.statusCode)),
+        from(
+          this.cryptoEnvelope.encryptOutgoing(
+            request.secureContext!,
+            data,
+            response.statusCode,
+          ),
+        ),
       ),
       mergeMap((envelope) => {
-        response.setHeader(SECURE_ENVELOPE_HEADER, SECURE_ENVELOPE_HEADER_VALUE);
-        response.setHeader('x-request-id', request.secureContext!.requestId);
-        response.setHeader('cache-control', 'no-store');
+        response.setHeader(
+          SECURE_ENVELOPE_HEADER,
+          request.secureContext!.protocol,
+        );
+        if (request.secureContext!.protocol === "v2") {
+          response.type("application/jose+json");
+        }
+        response.setHeader("x-request-id", request.secureContext!.requestId);
+        response.setHeader("cache-control", "no-store");
         return [envelope];
       }),
     );

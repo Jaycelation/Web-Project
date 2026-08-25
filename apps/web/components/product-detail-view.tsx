@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { formatMoney } from '@/lib/format';
 import { useCart } from './cart-provider';
-import { CartIcon, LockIcon, PackageIcon, ShieldIcon } from './icons';
+import { CartIcon, RefreshIcon, SparkleIcon, TruckIcon } from './icons';
 
 export function ProductDetailView({ product }: { product: ProductDetailDto }) {
   const router = useRouter();
@@ -56,9 +56,9 @@ export function ProductDetailView({ product }: { product: ProductDetailDto }) {
         <button className="button button-primary" type="button" disabled={!variant?.availableStock} onClick={() => add(true)}>Mua ngay</button>
       </div>
       <div className="detail-assurances">
-        <div><ShieldIcon /><strong>Hàng chính hãng</strong>Thông tin SKU và tồn kho rõ ràng.</div>
-        <div><PackageIcon /><strong>Đổi trả 7 ngày</strong>Theo chính sách và điều kiện.</div>
-        <div><LockIcon /><strong>Checkout an toàn</strong>Tổng tiền tính lại phía server.</div>
+        <div><SparkleIcon /><strong>Sản phẩm chính hãng</strong>Thông tin phiên bản rõ ràng.</div>
+        <div><RefreshIcon /><strong>Đổi trả 7 ngày</strong>Theo chính sách và điều kiện.</div>
+        <div><TruckIcon /><strong>Giao hàng linh hoạt</strong>Theo dõi hành trình đơn dễ dàng.</div>
       </div>
     </div>
   </div>;

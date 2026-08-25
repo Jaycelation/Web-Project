@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEmail, IsTrue, MaxLength } from 'class-validator';
+import { Equals, IsBoolean, IsEmail, MaxLength } from 'class-validator';
 
 export class SubscribeDto {
   @IsEmail()
@@ -8,6 +8,6 @@ export class SubscribeDto {
   email: string;
 
   @IsBoolean()
-  @IsTrue({ message: 'Cần đồng ý nhận thông tin marketing.' })
+  @Equals(true, { message: 'Cần đồng ý nhận thông tin marketing.' })
   consent: boolean;
 }

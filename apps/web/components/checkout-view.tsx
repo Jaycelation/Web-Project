@@ -3,12 +3,12 @@
 import type { CheckoutResult } from '@secure-commerce/contracts';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { apiErrorMessage, browserApi, clientCheckout } from '@/lib/api';
+import { apiErrorMessage, browserRequest, clientCheckout } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { useAuth } from './auth-provider';
 import { useCart } from './cart-provider';
 import { EmptyState, LoadingState } from './loading-state';
-import { LockIcon, ShieldIcon } from './icons';
+import { PackageIcon } from './icons';
 
 interface Quote { subtotal: number; discount: number; shippingFee: number; total: number }
 const COUPON_KEY = 'secure-commerce-coupon-v1';
@@ -32,7 +32,7 @@ export function CheckoutView() {
 
   useEffect(() => {
     if (!hydrated || !lines.length) return;
-    void browserApi().request<Quote>('/checkout/quote', { items: lines, ...(coupon ? { couponCode: coupon } : {}) })
+    void browserRequest<Quote>('/checkout/quote', { items: lines, ...(coupon ? { couponCode: coupon } : {}) })
       .then(setQuote)
       .catch(() => setQuote({ subtotal, discount: 0, shippingFee: subtotal >= 1_000_000 ? 0 : 30_000, total: subtotal + (subtotal >= 1_000_000 ? 0 : 30_000) }));
   }, [coupon, hydrated, lines, subtotal]);
@@ -43,6 +43,10 @@ export function CheckoutView() {
     setLoading(true);
     setError('');
     try {
+      const line2 = String(data.get('line2') ?? '').trim();
+      const ward = String(data.get('ward') ?? '').trim();
+      const postalCode = String(data.get('postalCode') ?? '').trim();
+      const customerNote = String(data.get('customerNote') ?? '').trim();
       const order = await clientCheckout({
         items: lines,
         shippingAddress: {
@@ -50,16 +54,16 @@ export function CheckoutView() {
           phone: String(data.get('phone') ?? ''),
           email: String(data.get('email') ?? ''),
           line1: String(data.get('line1') ?? ''),
-          line2: String(data.get('line2') ?? '') || undefined,
-          ward: String(data.get('ward') ?? '') || undefined,
+          ...(line2 ? { line2 } : {}),
+          ...(ward ? { ward } : {}),
           district: String(data.get('district') ?? ''),
           province: String(data.get('province') ?? ''),
-          postalCode: String(data.get('postalCode') ?? '') || undefined,
+          ...(postalCode ? { postalCode } : {}),
           country: 'VN',
         },
         paymentMethod,
         ...(coupon ? { couponCode: coupon } : {}),
-        customerNote: String(data.get('customerNote') ?? '') || undefined,
+        ...(customerNote ? { customerNote } : {}),
         ...(!user && guestSessionId ? { guestSessionId } : {}),
       }, idempotencyKey.current);
       setResult(order);
@@ -110,9 +114,8 @@ export function CheckoutView() {
       <div className="summary-row"><span>Vận chuyển</span><strong>{totals.shippingFee ? formatMoney(totals.shippingFee) : 'Miễn phí'}</strong></div>
       <div className="summary-row summary-total"><span>Thanh toán</span><strong>{formatMoney(totals.total)}</strong></div>
       {error && <div className="alert alert-error">{error}</div>}
-      <button className="button button-primary button-block" type="submit" disabled={loading}>{loading ? 'Đang tạo đơn an toàn…' : 'Đặt hàng'}</button>
-      <p className="summary-note"><ShieldIcon /> Nút có thể bấm lại an toàn: cùng idempotency key chỉ tạo tối đa một đơn.</p>
-      <p className="summary-note"><LockIcon /> Payload checkout được bọc bằng AES‑256‑GCM; khóa AES được RSA‑OAEP wrap.</p>
+      <button className="button button-primary button-block" type="submit" disabled={loading}>{loading ? 'Đang đặt hàng…' : 'Đặt hàng'}</button>
+      <p className="summary-note"><PackageIcon /> Kiểm tra lại thông tin nhận hàng trước khi xác nhận.</p>
     </aside>
   </form>;
 }

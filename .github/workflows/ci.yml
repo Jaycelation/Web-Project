@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://secure_commerce:test-only@localhost:5432/secure_commerce?schema=public
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Build container images
+        run: docker compose build migrate seed api web
+      - name: Start integration stack
+        run: |
+          docker compose up -d
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:4000/api/v1/health >/dev/null \
+              && curl --fail --silent http://localhost:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+      - name: Run encrypted API acceptance
+        env:
+          API_BASE_URL: http://localhost:4000/api/v1
+          ACCEPTANCE_WRITE: "1"
+        run: npm run test:api
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Clean integration stack
+        if: always()
+        run: docker compose down -v --remove-orphans

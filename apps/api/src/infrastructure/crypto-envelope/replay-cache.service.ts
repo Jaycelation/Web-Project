@@ -1,5 +1,5 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConflictException, Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ReplayCacheService {
@@ -8,7 +8,7 @@ export class ReplayCacheService {
   private readonly maxEntries = 100_000;
 
   constructor(config: ConfigService) {
-    this.ttlMs = Number(config.get<string>('CRYPTO_REPLAY_TTL_MS', '180000'));
+    this.ttlMs = Number(config.get<string>("CRYPTO_REPLAY_TTL_MS", "300000"));
   }
 
   consume(clientKeyId: string, nonce: string, now = Date.now()): void {
@@ -17,10 +17,14 @@ export class ReplayCacheService {
     const expiresAt = this.entries.get(key);
     if (expiresAt && expiresAt > now) {
       throw new ConflictException({
-        code: 'REPLAY_DETECTED',
-        message: 'Request nonce đã được sử dụng.',
+        code: "REPLAY_DETECTED",
+        message: "Request nonce đã được sử dụng.",
       });
     }
+    // Map.set() does not move an existing key to the end. Remove an expired
+    // entry first so insertion order continues to match expiry order and the
+    // pruning fast path remains correct.
+    if (expiresAt !== undefined) this.entries.delete(key);
     if (this.entries.size >= this.maxEntries) {
       const firstKey = this.entries.keys().next().value as string | undefined;
       if (firstKey) this.entries.delete(firstKey);

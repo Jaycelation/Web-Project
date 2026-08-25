@@ -10,17 +10,49 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secure_commerce} -d ${POSTGRES_DB:-secure_commerce}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-secure_commerce} -d ${POSTGRES_DB:-secure_commerce}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migration
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-secure_commerce}:${POSTGRES_PASSWORD:-secure_commerce_dev}@db:5432/${POSTGRES_DB:-secure_commerce}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  seed:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migration
+    command: ["npm", "run", "db:seed", "-w", "@secure-commerce/api"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      ALLOW_DEMO_SEED: ${ALLOW_DEMO_SEED:-false}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-secure_commerce}:${POSTGRES_PASSWORD:-secure_commerce_dev}@db:5432/${POSTGRES_DB:-secure_commerce}?schema=public
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-development}
       API_PORT: 4000
       WEB_ORIGIN: http://localhost:3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-secure_commerce}:${POSTGRES_PASSWORD:-secure_commerce_dev}@db:5432/${POSTGRES_DB:-secure_commerce}?schema=public
@@ -31,17 +63,34 @@ services:
       CRYPTO_KEY_ID: dev-rsa-2026-01
       CRYPTO_PRIVATE_KEY_PATH: /app/apps/api/.local/keys/server-private.pem
       CRYPTO_PUBLIC_KEY_PATH: /app/apps/api/.local/keys/server-public.pem
+      CRYPTO_SIGNING_KEY_ID: dev-signing-rsa-2026-01
+      CRYPTO_SIGNING_PRIVATE_KEY_PATH: /app/apps/api/.local/keys/server-signing-private.pem
+      CRYPTO_SIGNING_PUBLIC_KEY_PATH: /app/apps/api/.local/keys/server-signing-public.pem
+      CRYPTO_ACCEPT_V1: "true"
       CRYPTO_AUTO_GENERATE: "true"
       CRYPTO_MAX_CLOCK_SKEW_MS: 120000
-      CRYPTO_REPLAY_TTL_MS: 180000
+      CRYPTO_REPLAY_TTL_MS: 300000
       CRYPTO_RSA_BITS: 3072
     ports:
       - "4000:4000"
     volumes:
       - crypto_keys:/app/apps/api/.local/keys
     depends_on:
-      db:
-        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
 
   web:
     build:
@@ -49,14 +98,32 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+        NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256: ${NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256:-}
+        NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256: ${NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256:-}
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+      NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256: ${NEXT_PUBLIC_CRYPTO_SERVER_KEY_SHA256:-}
+      NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256: ${NEXT_PUBLIC_CRYPTO_SIGNING_KEY_SHA256:-}
       API_INTERNAL_URL: http://api:4000/api/v1
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
 
 volumes:
   postgres_data:

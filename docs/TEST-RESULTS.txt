@@ -1,66 +1,88 @@
 SECURE COMMERCE - VERIFICATION RECORD
-Date: 2026-08-11
+Date: 2026-08-25
 
-1) Core package typecheck
-   PASS: packages/contracts
-   PASS: packages/domain
-   PASS: packages/crypto-envelope
+Runtime
+  Node.js: v22.23.2
+  npm: 10.9.8
+  Prisma CLI/Client: 6.12.0
 
-2) Core acceptance tests
-TAP version 13
-# Subtest: hybrid envelope round-trip request và response
-ok 1 - hybrid envelope round-trip request và response
-  ---
-  duration_ms: 508.246603
-  type: 'test'
-  ...
-# Subtest: AES-GCM phát hiện ciphertext bị sửa
-ok 2 - AES-GCM phát hiện ciphertext bị sửa
-  ---
-  duration_ms: 445.412622
-  type: 'test'
-  ...
-# Subtest: AAD bị sửa làm envelope không xác thực được
-ok 3 - AAD bị sửa làm envelope không xác thực được
-  ---
-  duration_ms: 420.960798
-  type: 'test'
-  ...
-# Subtest: server tính giá từ catalogue tin cậy, bỏ qua giá giả do client chèn
-ok 4 - server tính giá từ catalogue tin cậy, bỏ qua giá giả do client chèn
-  ---
-  duration_ms: 0.774263
-  type: 'test'
-  ...
-# Subtest: không cho mua vượt tồn kho
-ok 5 - không cho mua vượt tồn kho
-  ---
-  duration_ms: 0.370992
-  type: 'test'
-  ...
-# Subtest: state machine đơn hàng chặn chuyển trạng thái trái phép
-ok 6 - state machine đơn hàng chặn chuyển trạng thái trái phép
-  ---
-  duration_ms: 0.229972
-  type: 'test'
-  ...
-1..6
-# tests 6
-# suites 0
-# pass 6
-# fail 0
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 1459.333224
+1) Reproducible dependency install
+  PASS: package-lock.json generated and consumed by npm ci in Docker builds.
+  PASS: jose is pinned exactly at 6.2.10 in the shared crypto workspace.
+  PASS: API production dependency prune found 0 vulnerabilities.
 
-3) Source parse check
-   PASS: 124 TypeScript/TSX files; 0 parse errors
+2) Full static verification
+  PASS: npm run typecheck (api, web, contracts, crypto-envelope, domain).
+  PASS: npm run build (NestJS API and all 18 Next.js routes).
+  PASS: repeated NestJS build recreates dist on every run.
+  PASS: docker compose config --quiet.
+  PASS: git diff --check.
 
-4) Local import/assets check
-   PASS: 0 missing local imports
-   PASS: 0 missing referenced /products assets
+3) Automated tests
+  PASS: core acceptance 17/17 (12 top-level cases + 5 field-tamper subtests).
+    - legacy v1 and RFC 7516 Flattened JWE v2 round-trips
+    - nested PS256 JWS then JWE response round-trip
+    - protected/encrypted_key/iv/ciphertext/tag tamper rejection
+    - forged signing key rejection and signed response binding rejection
+    - no automatic v2-to-v1 downgrade
+    - native browser fetch receiver regression
+    - legacy ciphertext and AAD tamper detection
+    - authoritative pricing
+    - stock limit
+    - order state machine
+  PASS: security acceptance 9/9.
+    - replay rejection and expired-entry prune order
+    - guest CSRF bypass and refresh-only cookie CSRF enforcement
+    - production placeholder/auto-key/insecure-origin/signing-key rejection
+    - invalid numeric config and replay TTL window rejection
+    - valid hardened production configuration
+  TOTAL: 26/26 pass.
+  PASS: API/web workspace test commands (currently 0 additional cases).
 
-5) Full dependency/build status
-   NOT EXECUTED: npm registry DNS unavailable in packaging environment (EAI_AGAIN).
-   Required after handover: npm install && npm run build && npm run typecheck && npm test
+4) Dependency audit
+  PASS: npm audit --audit-level=high.
+  RESULT: 0 vulnerabilities at verification time.
+
+5) Database migration
+  PASS: Prisma schema validation/generation.
+  PASS: initial migration SQL matches schema output (ignoring only the final blank line).
+  PASS: migration 20260825000000_initial applied; finished_at is present.
+  PASS: migrate and seed one-shot containers exit 0.
+
+6) Docker runtime
+  PASS: migrate, seed, api and web images build.
+  PASS: PostgreSQL, API and web healthchecks are healthy.
+  PASS: API and web run as non-root user node.
+  PASS: API restart preserves both encryption and signing RSA keys and reconnects to PostgreSQL.
+
+7) Live JOSE API acceptance
+  PASS: health/database and descriptor with encryption/signing public keys only.
+  PASS: JWE v2 catalog search, product detail and checkout quote with PS256-signed responses.
+  PASS: legacy v1 catalog smoke during the migration window.
+  PASS: customer/admin login, cookie session and /auth/me.
+  PASS: refresh rotation; stale refresh token rejected; missing CSRF rejected.
+  PASS: customer denied admin route and admin dashboard accepted.
+  PASS: COD order creation, same-key idempotent retry and guest tracking.
+  CREATED TEST ORDER: SC20260825-04FBE590E3
+  DATABASE CHECK: exactly 1 acceptance-*@example.test order exists.
+
+8) CI definition
+  ADDED: npm ci, full verify, Docker image build, integration stack startup,
+         write acceptance, failure logs and always-run volume cleanup.
+  NOTE: workflow file was validated locally through its component commands;
+        the hosted GitHub Actions run requires a push/PR.
+
+9) Storefront and browser verification
+  PASS: public branding, metadata, manifest and favicon render as MIRA.
+  PASS: public HTML for home/login/catalog/cart exposes no RSA, AES, envelope,
+        CSRF, token, idempotency, admin link or implementation stack copy.
+  PASS: desktop full-page visual review for home, catalog, product and login.
+  PASS: mobile emulation at 390px reports document scrollWidth = viewport width.
+  PASS: production CSP connect-src resolves to API origin and permits child paths.
+  PASS: Chromium login through the production web container reaches /tai-khoan.
+  PASS: login and account overview use x-secure-envelope=v2 and application/jose+json responses.
+  PASS: browser login produced no console/page error and no Illegal invocation.
+
+Production certification is intentionally NOT claimed. Remaining gates include
+TLS/KMS/real secrets, distributed replay storage for multi-replica deployment,
+provider integrations, backup/restore, observability, load/DAST and independent pentest.

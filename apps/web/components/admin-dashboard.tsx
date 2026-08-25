@@ -2,14 +2,14 @@
 
 import type { DashboardDto } from '@secure-commerce/contracts';
 import { useEffect, useState } from 'react';
-import { apiErrorMessage, browserApi } from '@/lib/api';
+import { apiErrorMessage, browserRequest } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { orderStatusLabel } from '@/lib/status';
 import { LoadingState } from './loading-state';
 
 export function AdminDashboard() {
   const [data, setData] = useState<DashboardDto | null>(null); const [days, setDays] = useState(30); const [error, setError] = useState(''); const [loading, setLoading] = useState(true);
-  useEffect(() => { setLoading(true); void browserApi().request<DashboardDto>('/admin/dashboard', { days }).then(setData).catch((requestError) => setError(apiErrorMessage(requestError))).finally(() => setLoading(false)); }, [days]);
+  useEffect(() => { setLoading(true); void browserRequest<DashboardDto>('/admin/dashboard', { days }).then(setData).catch((requestError) => setError(apiErrorMessage(requestError))).finally(() => setLoading(false)); }, [days]);
   if (loading && !data) return <LoadingState />;
   if (!data) return <div className="alert alert-error">{error || 'Không tải được dashboard.'}</div>;
   const maxRevenue = Math.max(...data.dailyRevenue.map((item) => item.revenue), 1);

@@ -3,28 +3,36 @@
 ## Thành phần
 
 - Source monorepo: `apps`, `packages`, `scripts`.
-- PostgreSQL schema + seed: `apps/api/prisma`.
-- Docker Compose và Dockerfile cho API/web.
+- PostgreSQL schema, migration bất biến và seed: `apps/api/prisma`.
+- Docker Compose với service `migrate`, `seed`, `api`, `web`, `db` và healthcheck.
 - Tài liệu kiến trúc, security, scope và acceptance trong `docs`.
-- Test lõi: `scripts/acceptance-core.test.mjs`.
-- Smoke test API: `scripts/acceptance-api.mjs`.
+- Test lõi/bảo mật: `scripts/acceptance-core.test.mjs`, `scripts/acceptance-security.test.mjs`.
+- Acceptance API live: `scripts/acceptance-api.mjs`.
+- Lockfile npm và workflow CI trong `.github/workflows/ci.yml`.
+- JOSE dual-stack: storefront dùng JWE v2; server tạm nhận legacy v1 qua `CRYPTO_ACCEPT_V1`.
+- Hai RSA key pair tách biệt: encryption `RSA-OAEP-256` và response signing `PS256`.
 
-## Kết quả xác minh tại thời điểm đóng gói
+## Kết quả xác minh ngày 2026-08-25
 
-- `node --test scripts/acceptance-core.test.mjs`: 6/6 pass.
-- Parse TypeScript/TSX bằng TypeScript compiler API: không có parse error.
-- Dependency install/full build chưa thể chạy trong môi trường đóng gói do DNS tới npm registry không khả dụng.
+- Node.js `v22.23.2`; dependency cài bằng `npm ci` từ lockfile.
+- Full typecheck và build monorepo: pass.
+- Core + security acceptance: pass, gồm JWE/JWS tamper, signature, binding, no-downgrade, replay và production config.
+- `npm audit`: 0 advisory tại thời điểm chạy.
+- Docker image build: pass; migration/seed exit 0; API, web và PostgreSQL healthy.
+- API acceptance: JWE v2 + signed response, legacy v1 smoke, auth/session, refresh rotation, CSRF và RBAC pass; write acceptance COD/idempotency/guest tracking đã có record riêng.
+- Chromium production-container smoke: đăng nhập tới `/tai-khoan`, request/response đều `v2`, không có console/page error.
+
+Chi tiết cập nhật nằm trong `docs/TEST-RESULTS.txt` và `docs/IMPLEMENTATION-CHECKLIST.md`.
 
 ## Việc đầu tiên bên nhận nên chạy
 
 ```bash
 cp .env.example .env
-npm install
-npm run build
-npm run typecheck
-npm test
-docker compose up --build
+nvm use
+npm ci
+npm run verify
+docker compose up --build -d
 API_BASE_URL=http://localhost:4000/api/v1 npm run test:api
 ```
 
-Mọi secret và credential trong repo là giá trị demo, phải thay trước khi expose.
+Compose mặc định là stack local/demo và seed credential mẫu. Mọi secret/credential/khóa phải được thay trước khi expose; production phải cấp hai key pair, hai fingerprint pin, HTTPS và `CRYPTO_AUTO_GENERATE=false`. Chỉ tắt `CRYPTO_ACCEPT_V1` sau khi telemetry xác nhận không còn client cũ.
