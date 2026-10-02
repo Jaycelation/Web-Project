@@ -1,0 +1,318 @@
+
+> secure-commerce@0.2.0 test:upgrade:unit
+> npm run build -w @secure-commerce/domain && node --test scripts/acceptance-upgrade.test.mjs
+
+
+> @secure-commerce/domain@0.2.0 build
+> tsc -p tsconfig.json
+
+TAP version 13
+# Subtest: collection limits match API selection bound
+ok 1 - collection limits match API selection bound
+  ---
+  duration_ms: 2.167477
+  type: 'test'
+  ...
+# Subtest: collections reject malformed values and normalize case
+ok 2 - collections reject malformed values and normalize case
+  ---
+  duration_ms: 0.314034
+  type: 'test'
+  ...
+# Subtest: collections enforce capacity
+ok 3 - collections enforce capacity
+  ---
+  duration_ms: 0.166271
+  type: 'test'
+  ...
+# Subtest: invalid capacity never returns IDs
+ok 4 - invalid capacity never returns IDs
+  ---
+  duration_ms: 0.110677
+  type: 'test'
+  ...
+# Subtest: toggle adds and removes without mutation
+ok 5 - toggle adds and removes without mutation
+  ---
+  duration_ms: 0.21854
+  type: 'test'
+  ...
+# Subtest: full comparison refuses a fifth item but permits removal
+ok 6 - full comparison refuses a fifth item but permits removal
+  ---
+  duration_ms: 0.179932
+  type: 'test'
+  ...
+# Subtest: invalid ID cannot enter a collection
+ok 7 - invalid ID cannot enter a collection
+  ---
+  duration_ms: 0.093502
+  type: 'test'
+  ...
+# Subtest: recent list is MRU and deduplicated
+ok 8 - recent list is MRU and deduplicated
+  ---
+  duration_ms: 0.111689
+  type: 'test'
+  ...
+# Subtest: recent list evicts the oldest at capacity
+ok 9 - recent list evicts the oldest at capacity
+  ---
+  duration_ms: 0.23808
+  type: 'test'
+  ...
+# Subtest: available stock subtracts reservations
+ok 10 - available stock subtracts reservations
+  ---
+  duration_ms: 0.355687
+  type: 'test'
+  ...
+# Subtest: invalid inventory is not sellable
+ok 11 - invalid inventory is not sellable
+  ---
+  duration_ms: 0.155575
+  type: 'test'
+  ...
+# Subtest: zero available stock never adds one unit
+ok 12 - zero available stock never adds one unit
+  ---
+  duration_ms: 0.083766
+  type: 'test'
+  ...
+# Subtest: cart bounds quantity by stock and server limit
+ok 13 - cart bounds quantity by stock and server limit
+  ---
+  duration_ms: 0.064498
+  type: 'test'
+  ...
+# Subtest: delivered owner may review
+ok 14 - delivered owner may review
+  ---
+  duration_ms: 0.054532
+  type: 'test'
+  ...
+# Subtest: other user and guest cannot review
+ok 15 - other user and guest cannot review
+  ---
+  duration_ms: 0.04586
+  type: 'test'
+  ...
+# Subtest: review rejected for PENDING_CONFIRMATION
+ok 16 - review rejected for PENDING_CONFIRMATION
+  ---
+  duration_ms: 0.042815
+  type: 'test'
+  ...
+# Subtest: review rejected for CONFIRMED
+ok 17 - review rejected for CONFIRMED
+  ---
+  duration_ms: 0.029796
+  type: 'test'
+  ...
+# Subtest: review rejected for PREPARING
+ok 18 - review rejected for PREPARING
+  ---
+  duration_ms: 0.028203
+  type: 'test'
+  ...
+# Subtest: review rejected for SHIPPING
+ok 19 - review rejected for SHIPPING
+  ---
+  duration_ms: 0.031708
+  type: 'test'
+  ...
+# Subtest: review rejected for CANCELLED
+ok 20 - review rejected for CANCELLED
+  ---
+  duration_ms: 0.025168
+  type: 'test'
+  ...
+# Subtest: review rejected for REFUNDED
+ok 21 - review rejected for REFUNDED
+  ---
+  duration_ms: 0.030216
+  type: 'test'
+  ...
+# Subtest: review rejected for RETURN_REQUESTED
+ok 22 - review rejected for RETURN_REQUESTED
+  ---
+  duration_ms: 0.028483
+  type: 'test'
+  ...
+# Subtest: customer may cancel pending own order only
+ok 23 - customer may cancel pending own order only
+  ---
+  duration_ms: 0.067151
+  type: 'test'
+  ...
+# Subtest: customer may request return but cannot self-refund
+ok 24 - customer may request return but cannot self-refund
+  ---
+  duration_ms: 0.048984
+  type: 'test'
+  ...
+# Subtest: valid coupon terms pass
+ok 25 - valid coupon terms pass
+  ---
+  duration_ms: 0.189096
+  type: 'test'
+  ...
+# Subtest: coupon rejects code syntax
+ok 26 - coupon rejects code syntax
+  ---
+  duration_ms: 0.092079
+  type: 'test'
+  ...
+# Subtest: coupon rejects percentage over 100
+ok 27 - coupon rejects percentage over 100
+  ---
+  duration_ms: 0.049575
+  type: 'test'
+  ...
+# Subtest: coupon rejects zero percentage
+ok 28 - coupon rejects zero percentage
+  ---
+  duration_ms: 0.038769
+  type: 'test'
+  ...
+# Subtest: coupon rejects negative price
+ok 29 - coupon rejects negative price
+  ---
+  duration_ms: 0.03963
+  type: 'test'
+  ...
+# Subtest: coupon rejects database integer overflow
+ok 30 - coupon rejects database integer overflow
+  ---
+  duration_ms: 0.038168
+  type: 'test'
+  ...
+# Subtest: coupon rejects fractional discount
+ok 31 - coupon rejects fractional discount
+  ---
+  duration_ms: 0.035994
+  type: 'test'
+  ...
+# Subtest: coupon rejects zero user limit
+ok 32 - coupon rejects zero user limit
+  ---
+  duration_ms: 0.035493
+  type: 'test'
+  ...
+# Subtest: coupon rejects zero total limit
+ok 33 - coupon rejects zero total limit
+  ---
+  duration_ms: 0.537122
+  type: 'test'
+  ...
+# Subtest: coupon rejects zero cap
+ok 34 - coupon rejects zero cap
+  ---
+  duration_ms: 0.054292
+  type: 'test'
+  ...
+# Subtest: coupon rejects fixed discount with cap
+ok 35 - coupon rejects fixed discount with cap
+  ---
+  duration_ms: 0.038258
+  type: 'test'
+  ...
+# Subtest: coupon rejects free shipping with nonzero value
+ok 36 - coupon rejects free shipping with nonzero value
+  ---
+  duration_ms: 0.030015
+  type: 'test'
+  ...
+# Subtest: coupon rejects invalid date
+ok 37 - coupon rejects invalid date
+  ---
+  duration_ms: 0.0328
+  type: 'test'
+  ...
+# Subtest: coupon rejects end before start
+ok 38 - coupon rejects end before start
+  ---
+  duration_ms: 0.034793
+  type: 'test'
+  ...
+# Subtest: coupon rejects equal dates
+ok 39 - coupon rejects equal dates
+  ---
+  duration_ms: 0.090857
+  type: 'test'
+  ...
+# Subtest: fixed and free shipping coupons pass with valid values
+ok 40 - fixed and free shipping coupons pass with valid values
+  ---
+  duration_ms: 0.080812
+  type: 'test'
+  ...
+# Subtest: CSV quotes embedded delimiters, quotes and multiline cells
+ok 41 - CSV quotes embedded delimiters, quotes and multiline cells
+  ---
+  duration_ms: 0.12598
+  type: 'test'
+  ...
+# Subtest: CSV prefixes formula-like textual cells visibly
+ok 42 - CSV prefixes formula-like textual cells visibly
+  ---
+  duration_ms: 0.203157
+  type: 'test'
+  ...
+# Subtest: CSV keeps numeric cells and strips control characters
+ok 43 - CSV keeps numeric cells and strips control characters
+  ---
+  duration_ms: 0.11904
+  type: 'test'
+  ...
+# Subtest: CSV uses UTF-8 BOM and CRLF
+ok 44 - CSV uses UTF-8 BOM and CRLF
+  ---
+  duration_ms: 0.090817
+  type: 'test'
+  ...
+# Subtest: catalog URL maps query to q and drops defaults
+ok 45 - catalog URL maps query to q and drops defaults
+  ---
+  duration_ms: 0.19836
+  type: 'test'
+  ...
+# Subtest: catalog URL preserves pagination and literal zero price
+ok 46 - catalog URL preserves pagination and literal zero price
+  ---
+  duration_ms: 0.115515
+  type: 'test'
+  ...
+# Subtest: authoritative pricing plus percentage cap remains correct
+ok 47 - authoritative pricing plus percentage cap remains correct
+  ---
+  duration_ms: 0.511313
+  type: 'test'
+  ...
+# Subtest: server pricing rejects overselling
+ok 48 - server pricing rejects overselling
+  ---
+  duration_ms: 0.365603
+  type: 'test'
+  ...
+# Subtest: fixed discount cannot make total negative
+ok 49 - fixed discount cannot make total negative
+  ---
+  duration_ms: 0.085269
+  type: 'test'
+  ...
+# Subtest: free shipping affects shipping, not merchandise amount
+ok 50 - free shipping affects shipping, not merchandise amount
+  ---
+  duration_ms: 0.070917
+  type: 'test'
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 82.378161

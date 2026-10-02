@@ -1,3 +1,4 @@
+import { ProductActions } from './product-actions';
 import type { ProductSummaryDto } from '@secure-commerce/contracts';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ export function ProductCard({ product }: { product: ProductSummaryDto }) {
         <div><strong>{formatMoney(product.price)}</strong>{product.compareAtPrice && <del>{formatMoney(product.compareAtPrice)}</del>}</div>
         <Link className="round-link" href={`/san-pham/${product.slug}`} aria-label={`Xem ${product.name}`}><ArrowIcon /></Link>
       </div>
+      <ProductActions productId={product.id} />
     </div>
   </article>;
 }

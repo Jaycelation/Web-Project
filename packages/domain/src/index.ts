@@ -181,3 +181,5 @@ export function requiresInventoryReservationRelease(status: OrderStatus): boolea
 export function requiresInventoryRestock(status: OrderStatus): boolean {
   return status === 'CONFIRMED' || status === 'PREPARING';
 }
+
+export * from './commerce-upgrade.js';

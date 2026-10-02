@@ -1,4 +1,6 @@
-# MIRA Commerce
+# MIRA Commerce v0.2
+
+> Bản nâng cấp source ngày 02/10/2026. Xem [review, tính năng, hướng dẫn và giới hạn](docs/UPGRADE-REVIEW-VI.md). **80 kiểm thử cục bộ qua; chưa full build/integration.** Next 16.3.0 trong lockfile cần vá bằng `npm run security:patch-next` và verify trước khi public.
 
 Monorepo TypeScript cho website thương mại điện tử MVP theo kiến trúc **modular monolith**, gồm:
 
@@ -16,7 +18,9 @@ Monorepo TypeScript cho website thương mại điện tử MVP theo kiến trú
 
 - Trang chủ, danh mục, tìm kiếm, lọc, sắp xếp và phân trang.
 - Trang chi tiết sản phẩm, hình ảnh, biến thể, tồn khả dụng và chính sách.
-- Giỏ hàng responsive; lưu local cho khách và API cart cho tài khoản.
+- Giỏ hàng responsive, lưu local; backend có API cart nhưng storefront chưa đồng bộ cart tài khoản.
+- Yêu thích (20), so sánh (4), đã xem (12), lưu trình duyệt.
+- Review đơn đã giao, chờ duyệt, tổng hợp sao và phân trang.
 - Checkout khách hoặc thành viên, quote phía server, coupon, COD/chuyển khoản.
 - Idempotency chống tạo trùng đơn.
 - Đăng ký, đăng nhập, đăng xuất, refresh session, quên/đặt lại mật khẩu.
@@ -32,7 +36,8 @@ Monorepo TypeScript cho website thương mại điện tử MVP theo kiến trú
 - Danh sách đơn, cập nhật state machine, mã vận đơn và ghi chú.
 - Danh sách khách, khóa/mở tài khoản.
 - Quản lý nội dung chính sách.
-- Audit log cho thao tác quản trị quan trọng.
+- Duyệt review, quản lý coupon, đối soát chuyển khoản thủ công, export CSV giới hạn 250 đơn.
+- Audit log cho thao tác quản trị quan trọng và UI tra cứu ADMIN.
 
 ### Kiểm soát bảo mật
 
@@ -52,11 +57,13 @@ Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](doc
 
 ## 2. Chạy nhanh bằng Docker Compose
 
-Yêu cầu: Docker Engine có Compose plugin.
+Yêu cầu: Docker Engine có Compose plugin; npm/Node trên host để cập nhật dependency trước khi build.
 
 ```bash
 cp .env.example .env
 # Thay JWT_ACCESS_SECRET và POSTGRES_PASSWORD trước khi dùng ngoài máy cá nhân.
+npm ci
+npm run security:patch-next
 docker compose up --build
 ```
 
@@ -76,10 +83,11 @@ Yêu cầu: Node.js 22+, npm 10+, PostgreSQL 16+.
 cp .env.example .env
 nvm use
 npm ci
-npm run crypto:keys
-npm run db:generate
-npm run db:deploy
-npm run db:seed
+npm run security:patch-next
+npm run local -- run crypto:keys
+npm run local -- run db:generate
+npm run local -- run db:deploy
+npm run local -- run db:seed
 npm run dev
 ```
 
@@ -87,9 +95,10 @@ Nếu PostgreSQL chạy trong Docker nhưng app chạy local:
 
 ```bash
 docker compose up -d db
-npm run db:generate
-npm run db:deploy
-npm run db:seed
+npm run local -- run crypto:keys
+npm run local -- run db:generate
+npm run local -- run db:deploy
+npm run local -- run db:seed
 npm run dev
 ```
 
@@ -153,7 +162,7 @@ secure-commerce/
 └── docker-compose.yml
 ```
 
-Các bounded module của API: `auth`, `account`, `catalog`, `cart`, `checkout`, `orders`, `admin`, `content`, `marketing`, `notifications`, cùng `infrastructure/crypto-envelope` và `infrastructure/prisma`.
+Các bounded module của API: `auth`, `account`, `catalog`, `cart`, `checkout`, `orders`, `admin`, `content`, `marketing`, `notifications`, `reviews`, `operations`, cùng `infrastructure/crypto-envelope` và `infrastructure/prisma`.
 
 ## 7. JWE protocol v2 và cửa sổ tương thích v1
 
@@ -230,7 +239,22 @@ Tối thiểu phải thực hiện các mục trong [docs/ACCEPTANCE.md](docs/AC
 - SAST, dependency audit, DAST, test race condition và penetration test độc lập.
 - Thay toàn bộ secret/demo credential và rà soát pháp lý các trang chính sách.
 
-## 11. Trạng thái kiểm thử hiện tại
+## 11. Kiểm thử v0.2 (02/10/2026)
+
+Domain/contracts build qua; 50 unit + 30 isolated service tests qua; 154 file qua syntax check. npm ci bị chặn registry/DNS; full build thiếu jose. Chưa chạy DB/API/browser/Docker/audit. Xem [log thực tế](docs/verification/README.md).
+
+```bash
+npm run test:upgrade:unit
+npm run test:upgrade:services
+npm run check:syntax
+npm run local -- run verify
+npm run test:upgrade:api
+```
+
+## 12. Lịch sử bàn giao gốc - KHÔNG phải kết quả v0.2
+
+> Phần dưới được giữ từ tài liệu trong ZIP gốc. Chưa được kiểm chứng lại; không suy diễn audit/CI của bản này từ các claim cũ.
+
 
 Đã xác minh trực tiếp ngày **2026-08-25** bằng Node.js 22 và Docker Compose:
 

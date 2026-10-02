@@ -13,7 +13,7 @@ interface Quote { subtotal: number; discount: number; shippingFee: number; total
 const COUPON_KEY = 'secure-commerce-coupon-v1';
 
 export function CartView() {
-  const { items, subtotal, hydrated, updateQuantity, removeItem } = useCart();
+  const { items, subtotal, hydrated, persistent, updateQuantity, removeItem } = useCart();
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -22,31 +22,28 @@ export function CartView() {
   const payloadItems = useMemo(() => items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })), [items]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(COUPON_KEY) ?? '';
-    setCoupon(stored);
-    setCouponInput(stored);
+    try { const stored = localStorage.getItem(COUPON_KEY) ?? ''; setCoupon(stored); setCouponInput(stored); } catch { /* Continue in memory. */ }
   }, []);
 
   useEffect(() => {
     if (!hydrated || payloadItems.length === 0) { setQuote(null); return; }
+    let active = true; setQuote(null); setLoadingQuote(true);
     const timer = window.setTimeout(async () => {
       setLoadingQuote(true);
       try {
         const result = await browserRequest<Quote>('/checkout/quote', { items: payloadItems, ...(coupon ? { couponCode: coupon } : {}) });
-        setQuote(result);
-        setMessage('');
+        if (active) { setQuote(result); setMessage(''); }
       } catch (error) {
-        setQuote({ subtotal, discount: 0, shippingFee: subtotal >= 1_000_000 ? 0 : 30_000, total: subtotal + (subtotal >= 1_000_000 ? 0 : 30_000) });
-        setMessage(apiErrorMessage(error));
-      } finally { setLoadingQuote(false); }
+        if (active) { setQuote(null); setMessage(apiErrorMessage(error)); }
+      } finally { if (active) setLoadingQuote(false); }
     }, 220);
-    return () => window.clearTimeout(timer);
+    return () => { active = false; window.clearTimeout(timer); };
   }, [coupon, hydrated, payloadItems, subtotal]);
 
   const applyCoupon = () => {
     const normalized = couponInput.trim().toUpperCase();
     setCoupon(normalized);
-    if (normalized) localStorage.setItem(COUPON_KEY, normalized); else localStorage.removeItem(COUPON_KEY);
+    try { if (normalized) localStorage.setItem(COUPON_KEY, normalized); else localStorage.removeItem(COUPON_KEY); } catch { /* Continue in memory. */ }
   };
 
   if (!hydrated) return <LoadingState label="Đang mở giỏ hàng…" />;
@@ -65,12 +62,14 @@ export function CartView() {
     </div>
     <aside className="summary-card">
       <h2>Tóm tắt đơn hàng</h2>
+      {!persistent && <p className="alert" role="status">Giỏ chỉ lưu trong phiên này do trình duyệt chặn lưu trữ.</p>}
+      {!quote && <p role="status">Giá dưới đây chỉ là ước tính; chưa xác nhận từ máy chủ.</p>}
       <div className="summary-row"><span>Tạm tính</span><strong>{formatMoney(totals.subtotal)}</strong></div>
       <div className="summary-row"><span>Giảm giá</span><strong>−{formatMoney(totals.discount)}</strong></div>
       <div className="summary-row"><span>Phí vận chuyển</span><strong>{totals.shippingFee ? formatMoney(totals.shippingFee) : 'Miễn phí'}</strong></div>
       <div className="coupon-box"><input aria-label="Mã giảm giá" value={couponInput} onChange={(event) => setCouponInput(event.target.value)} placeholder="WELCOME10" /><button type="button" onClick={applyCoupon}>Áp dụng</button></div>
       {message && <div className="alert alert-error">{message}</div>}
-      {coupon && !message && <div className="alert alert-success">Đã áp dụng mã {coupon}.</div>}
+      {coupon && quote && !message && <div className="alert alert-success">Đã áp dụng mã {coupon}.</div>}
       <div className="summary-row summary-total"><span>Tổng dự kiến</span><strong>{loadingQuote ? '…' : formatMoney(totals.total)}</strong></div>
       <Link className="button button-primary button-block" href="/thanh-toan">Tiến hành thanh toán</Link>
       <p className="summary-note"><TruckIcon /> Phí vận chuyển và ưu đãi được cập nhật trước khi đặt hàng.</p>

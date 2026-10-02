@@ -1,3 +1,6 @@
+import { SecureApiError } from '@secure-commerce/crypto-envelope';
+import { isDemoCatalogEnabled } from '@/lib/demo';
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -24,30 +27,27 @@ const policyPages: Record<string, { title: string; content: string }> = {
 };
 
 type Props = { params: Promise<{ slug: string }> };
+interface Policy {slug:string; title:string; content:string; updatedAt:string; seoTitle?:string|null; seoDescription?:string|null; demo?:boolean}
 export const dynamic = 'force-dynamic';
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const policy = policyPages[slug];
-  return { title: policy?.title ?? 'Chính sách', description: policy ? `Thông tin ${policy.title.toLowerCase()} tại MIRA.` : undefined };
-}
-
-export default async function PolicyPage({ params }: Props) {
-  const { slug } = await params;
-  const localPolicy = policyPages[slug];
-  if (!localPolicy) notFound();
-
-  let page: { slug: string; title: string; content: string; updatedAt: string } = {
-    slug,
-    ...localPolicy,
-    updatedAt: new Date('2026-08-25T00:00:00+07:00').toISOString(),
-  };
-  try {
-    const remote = await serverApi().request<typeof page, { slug: string }>('/content/page', { slug });
-    if (remote.content.trim().length > 160 && !remote.content.includes('Nội dung mẫu')) page = remote;
-  } catch {
-    // Nội dung chuẩn đi kèm storefront vẫn khả dụng khi dịch vụ nội dung gián đoạn.
+const loadPolicy = cache(async (slug: string): Promise<Policy> => {
+  try { return await serverApi().request<Policy, {slug:string}>('/content/page', {slug}); }
+  catch (error) {
+    // A deliberate unpublish (404) must never revive the bundled policy text.
+    if (error instanceof SecureApiError && error.status === 404) notFound();
+    const fallback = isDemoCatalogEnabled() ? policyPages[slug] : undefined;
+    if (!fallback) throw error;
+    return {slug, ...fallback, updatedAt: '2026-08-25T00:00:00+07:00', demo:true};
   }
-
-  return <><section className="page-hero"><div className="container page-hero-inner"><div className="breadcrumbs"><Link href="/">Trang chủ</Link><span>/</span><strong>{page.title}</strong></div></div></section><section className="section"><div className="container"><article className="policy-content"><h1>{page.title}</h1><p className="updated">Cập nhật: {formatDateTime(page.updatedAt)}</p><div className="policy-body">{page.content}</div></article></div></section></>;
+});
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const page = await loadPolicy((await params).slug);
+  return {title:page.seoTitle || page.title, description:page.seoDescription || page.content.slice(0,160)};
+}
+export default async function PolicyPage({ params }: Props) {
+  const page = await loadPolicy((await params).slug);
+  return <><section className="page-hero"><div className="container page-hero-inner"><div className="breadcrumbs"><Link href="/">Trang chủ</Link><span>/</span><strong>{page.title}</strong></div></div></section>
+    <section className="section"><div className="container"><article className="policy-content"><h1>{page.title}</h1>
+      {page.demo && <p className="alert" role="status">Nội dung minh họa (demo), chưa phải chính sách được công bố.</p>}
+      <p className="updated">Cập nhật: {formatDateTime(page.updatedAt)}</p><div className="policy-body">{page.content}</div>
+    </article></div></section></>;
 }

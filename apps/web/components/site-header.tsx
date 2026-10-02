@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { useAuth } from './auth-provider';
+import { CollectionNav } from './product-actions';
 import { useCart } from './cart-provider';
 import { CartIcon, SearchIcon, SparkleIcon, UserIcon } from './icons';
 
@@ -59,5 +60,6 @@ export function SiteHeader() {
         </nav>
       </div>
     </header>
+    <CollectionNav />
   </>;
 }

@@ -9,11 +9,12 @@ const nextConfig = {
   output: "standalone",
   transpilePackages: [
     "@secure-commerce/contracts",
+    "@secure-commerce/domain",
     "@secure-commerce/crypto-envelope",
   ],
   poweredByHeader: false,
   images: {
-    formats: ["image/avif", "image/webp"],
+    formats: ["image/webp"],
     remotePatterns: [],
   },
   async headers() {

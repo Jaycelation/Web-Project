@@ -21,24 +21,29 @@ export function CheckoutView() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [quoteError, setQuoteError] = useState('');
+  const [quoteRevision, setQuoteRevision] = useState(0);
   const [result, setResult] = useState<CheckoutResult | null>(null);
   const idempotencyKey = useRef('');
   const lines = useMemo(() => items.map((item) => ({ variantId: item.variantId, quantity: item.quantity })), [items]);
 
   useEffect(() => {
-    setCoupon(localStorage.getItem(COUPON_KEY) ?? '');
+    try { setCoupon(localStorage.getItem(COUPON_KEY) ?? ''); } catch { /* Continue without a stored coupon. */ }
     idempotencyKey.current ||= `checkout:${crypto.randomUUID()}`;
   }, []);
 
   useEffect(() => {
     if (!hydrated || !lines.length) return;
+    let active = true; setQuote(null); setQuoteError('');
     void browserRequest<Quote>('/checkout/quote', { items: lines, ...(coupon ? { couponCode: coupon } : {}) })
-      .then(setQuote)
-      .catch(() => setQuote({ subtotal, discount: 0, shippingFee: subtotal >= 1_000_000 ? 0 : 30_000, total: subtotal + (subtotal >= 1_000_000 ? 0 : 30_000) }));
-  }, [coupon, hydrated, lines, subtotal]);
+      .then((result) => { if (active) setQuote(result); })
+      .catch((cause) => { if (active) setQuoteError(apiErrorMessage(cause)); });
+    return () => { active = false; };
+  }, [coupon, hydrated, lines, quoteRevision, user?.id]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (loading || !quote) return;
     const data = new FormData(event.currentTarget);
     setLoading(true);
     setError('');
@@ -68,7 +73,7 @@ export function CheckoutView() {
       }, idempotencyKey.current);
       setResult(order);
       clear();
-      localStorage.removeItem(COUPON_KEY);
+      try { localStorage.removeItem(COUPON_KEY); } catch { /* Order is already successful. */ }
     } catch (requestError) {
       setError(apiErrorMessage(requestError));
     } finally { setLoading(false); }
@@ -112,9 +117,11 @@ export function CheckoutView() {
       <div className="summary-row" style={{ borderTop: '1px solid var(--line)', marginTop: 8, paddingTop: 16 }}><span>Tạm tính</span><strong>{formatMoney(totals.subtotal)}</strong></div>
       <div className="summary-row"><span>Giảm giá {coupon && `(${coupon})`}</span><strong>−{formatMoney(totals.discount)}</strong></div>
       <div className="summary-row"><span>Vận chuyển</span><strong>{totals.shippingFee ? formatMoney(totals.shippingFee) : 'Miễn phí'}</strong></div>
-      <div className="summary-row summary-total"><span>Thanh toán</span><strong>{formatMoney(totals.total)}</strong></div>
-      {error && <div className="alert alert-error">{error}</div>}
-      <button className="button button-primary button-block" type="submit" disabled={loading}>{loading ? 'Đang đặt hàng…' : 'Đặt hàng'}</button>
+      <div className="summary-row summary-total"><span>Thanh toán</span><strong>{quote ? formatMoney(totals.total) : 'Chưa xác nhận'}</strong></div>
+      {!quote && !quoteError && <p role="status">Đang xác nhận giá và tồn kho…</p>}
+      {quoteError && <div className="alert alert-error" role="alert">{quoteError} <button type="button" className="link-button" onClick={() => setQuoteRevision((n) => n + 1)}>Thử lại</button><br/><Link href="/gio-hang">Sửa giỏ hàng hoặc coupon</Link></div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
+      <button className="button button-primary button-block" type="submit" disabled={loading || !quote}>{loading ? 'Đang đặt hàng…' : 'Đặt hàng'}</button>
       <p className="summary-note"><PackageIcon /> Kiểm tra lại thông tin nhận hàng trước khi xác nhận.</p>
     </aside>
   </form>;

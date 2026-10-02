@@ -16,7 +16,8 @@ COPY packages/domain/package.json packages/domain/package.json
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN npm run build -w @secure-commerce/contracts \
+RUN npm run build -w @secure-commerce/domain \
+ && npm run build -w @secure-commerce/contracts \
  && npm run build -w @secure-commerce/crypto-envelope \
  && npm run build -w @secure-commerce/web
 

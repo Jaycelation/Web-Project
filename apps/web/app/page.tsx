@@ -6,16 +6,19 @@ import { NewsletterForm } from '@/components/newsletter-form';
 import { ProductCard } from '@/components/product-card';
 import { ServiceHighlights } from '@/components/service-highlights';
 import { searchCatalog } from '@/lib/api';
+import { isDemoCatalogEnabled } from '@/lib/demo';
 import { fallbackCatalog } from '@/lib/fallback-data';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let catalog: CatalogSearchResult;
+  let notice = '';
   try {
     catalog = await searchCatalog({ page: 1, pageSize: 8, sort: 'popular' });
   } catch {
-    catalog = fallbackCatalog;
+    catalog = isDemoCatalogEnabled() ? fallbackCatalog : { items: [], total: 0, page: 1, pageSize: 8, categories: [], brands: [] };
+    notice = isDemoCatalogEnabled() ? 'Dữ liệu minh họa (demo).' : 'Danh mục tạm thời không khả dụng. Vui lòng thử lại sau.';
   }
 
   return <>
@@ -36,7 +39,7 @@ export default async function HomePage() {
             <div className="hero-shape" />
             <div className="hero-product-card hero-product-phone"><Image src="/products/phone.svg" alt="" width={720} height={560} priority /></div>
             <div className="hero-product-card hero-product-audio"><Image src="/products/headphones.svg" alt="" width={720} height={560} priority /></div>
-            <div className="hero-price-pill"><small>Khám phá từ</small><strong>690.000 ₫</strong></div>
+            <div className="hero-price-pill"><small>MIRA SELECT</small><strong>Công nghệ mỗi ngày</strong></div>
           </div>
         </div>
       </div>
@@ -76,6 +79,7 @@ export default async function HomePage() {
           <div><span className="eyebrow">Được yêu thích</span><h2>Sản phẩm nổi bật.</h2></div>
           <Link className="section-heading-link" href="/san-pham?sort=popular">Xem tất cả <ArrowIcon /></Link>
         </div>
+        <p role="status">{notice}</p>
         <div className="product-grid">{catalog.items.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div>
       </div>
     </section>

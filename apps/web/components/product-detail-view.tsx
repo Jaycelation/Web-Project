@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { formatMoney } from '@/lib/format';
+import { ProductActions, TrackProductView } from './product-actions';
 import { useCart } from './cart-provider';
 import { CartIcon, RefreshIcon, SparkleIcon, TruckIcon } from './icons';
 
@@ -25,7 +26,7 @@ export function ProductDetailView({ product }: { product: ProductDetailDto }) {
     if (goToCart) router.push('/gio-hang');
   };
 
-  return <div className="product-detail-grid">
+  return <div className="product-detail-grid"><TrackProductView productId={product.id} />
     <div className="product-gallery">
       <div className="product-thumbnails">
         {product.images.map((item, index) => <button key={item.id} type="button" className={`product-thumbnail ${index === imageIndex ? 'active' : ''}`} onClick={() => setImageIndex(index)}><Image src={item.url} alt={item.alt} width={80} height={80} /></button>)}
@@ -37,7 +38,8 @@ export function ProductDetailView({ product }: { product: ProductDetailDto }) {
       <div className="product-meta"><span>{product.category.name}</span><span>{product.brand?.name ?? 'Chính hãng'}</span><span>SKU {variant?.sku ?? product.skuBase}</span></div>
       <h1>{product.name}</h1>
       <p className="product-subtitle">{product.shortDescription}</p>
-      <div className="product-rating"><span className="stars">★★★★★</span><span>4,9 · 128 đánh giá đã xác minh</span></div>
+      <a className="product-rating link-button" href="#danh-gia">Xem đánh giá từ khách đã mua</a>
+      <ProductActions productId={product.id} />
       <div className="detail-price"><strong>{formatMoney(variant?.price ?? product.price)}</strong>{variant?.compareAtPrice && <del>{formatMoney(variant.compareAtPrice)}</del>}<span className={`stock-pill ${!variant?.availableStock ? 'out' : ''}`}>{variant?.availableStock ? `Còn ${variant.availableStock} sản phẩm` : 'Hết hàng'}</span></div>
 
       <div className="option-block">

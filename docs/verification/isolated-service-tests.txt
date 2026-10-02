@@ -1,0 +1,198 @@
+
+> secure-commerce@0.2.0 test:upgrade:services
+> npm run build -w @secure-commerce/domain && node --test scripts/acceptance-upgrade-services.test.mjs
+
+
+> @secure-commerce/domain@0.2.0 build
+> tsc -p tsconfig.json
+
+TAP version 13
+# Subtest: transfer updates payment and order with audit in Serializable transaction
+ok 1 - transfer updates payment and order with audit in Serializable transaction
+  ---
+  duration_ms: 1.646799
+  type: 'test'
+  ...
+# Subtest: transfer rejects CANCELLED
+ok 2 - transfer rejects CANCELLED
+  ---
+  duration_ms: 0.455007
+  type: 'test'
+  ...
+# Subtest: transfer rejects REFUNDED
+ok 3 - transfer rejects REFUNDED
+  ---
+  duration_ms: 0.161665
+  type: 'test'
+  ...
+# Subtest: transfer rejects RETURN_REQUESTED
+ok 4 - transfer rejects RETURN_REQUESTED
+  ---
+  duration_ms: 0.116196
+  type: 'test'
+  ...
+# Subtest: transfer rejects COD and mismatched order total
+ok 5 - transfer rejects COD and mismatched order total
+  ---
+  duration_ms: 0.222637
+  type: 'test'
+  ...
+# Subtest: transfer rejects payment amount mismatch
+ok 6 - transfer rejects payment amount mismatch
+  ---
+  duration_ms: 0.14556
+  type: 'test'
+  ...
+# Subtest: transfer rejects ambiguous multiple bank records
+ok 7 - transfer rejects ambiguous multiple bank records
+  ---
+  duration_ms: 0.134353
+  type: 'test'
+  ...
+# Subtest: transfer same manual bank reference is idempotent
+ok 8 - transfer same manual bank reference is idempotent
+  ---
+  duration_ms: 0.214865
+  type: 'test'
+  ...
+# Subtest: transfer paid with a different reference is not overwritten
+ok 9 - transfer paid with a different reference is not overwritten
+  ---
+  duration_ms: 0.365503
+  type: 'test'
+  ...
+# Subtest: transfer missing order is a 404 branch
+ok 10 - transfer missing order is a 404 branch
+  ---
+  duration_ms: 0.444201
+  type: 'test'
+  ...
+# Subtest: operations maps P2002 to retryable conflict
+ok 11 - operations maps P2002 to retryable conflict
+  ---
+  duration_ms: 0.252982
+  type: 'test'
+  ...
+# Subtest: operations maps P2034 to retryable conflict
+ok 12 - operations maps P2034 to retryable conflict
+  ---
+  duration_ms: 0.101253
+  type: 'test'
+  ...
+# Subtest: invalid coupon rejected before touching persistence
+ok 13 - invalid coupon rejected before touching persistence
+  ---
+  duration_ms: 0.276398
+  type: 'test'
+  ...
+# Subtest: moderation changes status only and emits audit
+ok 14 - moderation changes status only and emits audit
+  ---
+  duration_ms: 0.238631
+  type: 'test'
+  ...
+# Subtest: CSV export caps rows and selects no direct customer PII
+ok 15 - CSV export caps rows and selects no direct customer PII
+  ---
+  duration_ms: 0.856174
+  type: 'test'
+  ...
+# Subtest: review created pending for delivered owner only
+ok 16 - review created pending for delivered owner only
+  ---
+  duration_ms: 0.2976
+  type: 'test'
+  ...
+# Subtest: review rejects missing purchase
+ok 17 - review rejects missing purchase
+  ---
+  duration_ms: 0.170487
+  type: 'test'
+  ...
+# Subtest: review rejects other owner
+ok 18 - review rejects other owner
+  ---
+  duration_ms: 0.08553
+  type: 'test'
+  ...
+# Subtest: review rejects not delivered
+ok 19 - review rejects not delivered
+  ---
+  duration_ms: 0.068734
+  type: 'test'
+  ...
+# Subtest: review rejects deleted product
+ok 20 - review rejects deleted product
+  ---
+  duration_ms: 0.065068
+  type: 'test'
+  ...
+# Subtest: review rejects hidden product
+ok 21 - review rejects hidden product
+  ---
+  duration_ms: 0.061763
+  type: 'test'
+  ...
+# Subtest: review rejects inactive category
+ok 22 - review rejects inactive category
+  ---
+  duration_ms: 0.062625
+  type: 'test'
+  ...
+# Subtest: review maps P2002
+ok 23 - review maps P2002
+  ---
+  duration_ms: 0.114964
+  type: 'test'
+  ...
+# Subtest: review maps P2034
+ok 24 - review maps P2034
+  ---
+  duration_ms: 0.119451
+  type: 'test'
+  ...
+# Subtest: public reviews approved only, mask author, return aggregate
+ok 25 - public reviews approved only, mask author, return aggregate
+  ---
+  duration_ms: 0.467516
+  type: 'test'
+  ...
+# Subtest: customer cancellation rechecks ownership and status inside transaction
+ok 26 - customer cancellation rechecks ownership and status inside transaction
+  ---
+  duration_ms: 0.467607
+  type: 'test'
+  ...
+# Subtest: delivery counter from SHIPPING increments 1 time
+ok 27 - delivery counter from SHIPPING increments 1 time
+  ---
+  duration_ms: 0.304921
+  type: 'test'
+  ...
+# Subtest: delivery counter from RETURN_REQUESTED increments 0 time
+ok 28 - delivery counter from RETURN_REQUESTED increments 0 time
+  ---
+  duration_ms: 0.096746
+  type: 'test'
+  ...
+# Subtest: catalog invalid price range rejected before query
+ok 29 - catalog invalid price range rejected before query
+  ---
+  duration_ms: 0.243278
+  type: 'test'
+  ...
+# Subtest: catalog SQL uses bound input and stock minus reserved semantics
+ok 30 - catalog SQL uses bound input and stock minus reserved semantics
+  ---
+  duration_ms: 0.498894
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 386.277487

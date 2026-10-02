@@ -1,0 +1,17 @@
+
+> secure-commerce@0.2.0 build
+> npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && npm run build -w @secure-commerce/contracts && npm run db:generate && npm run build -w @secure-commerce/api && npm run build -w @secure-commerce/web
+
+
+> @secure-commerce/crypto-envelope@0.2.0 build
+> tsc -p tsconfig.json
+
+src/index.ts(10,8): error TS2307: Cannot find module 'jose' or its corresponding type declarations.
+src/index.ts(15,8): error TS2307: Cannot find module 'jose' or its corresponding type declarations.
+npm error Lifecycle script `build` failed with error:
+npm error code 2
+npm error path /mnt/data/MIRA-Commerce-v0.2/packages/crypto-envelope
+npm error workspace @secure-commerce/crypto-envelope@0.2.0
+npm error location /mnt/data/MIRA-Commerce-v0.2/packages/crypto-envelope
+npm error command failed
+npm error command sh -c tsc -p tsconfig.json

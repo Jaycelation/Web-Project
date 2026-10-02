@@ -1,3 +1,5 @@
+import { ReviewsModule } from './modules/reviews/reviews.module.js';
+import { OperationsModule } from './modules/operations/operations.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -34,6 +36,8 @@ import { OrdersModule } from './modules/orders/orders.module.js';
     CartModule,
     CheckoutModule,
     OrdersModule,
+    ReviewsModule,
+    OperationsModule,
     AdminModule,
     ContentModule,
     HealthModule,

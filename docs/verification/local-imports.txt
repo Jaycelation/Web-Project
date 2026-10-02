@@ -1,0 +1,3 @@
+228 relative source imports resolve.
+Excluded generated Next declaration imports and intentional dist imports.
+This is a path check, not module typechecking or a bundler build.

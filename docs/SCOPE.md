@@ -1,3 +1,5 @@
+> v0.2 scope and feature boundaries are documented in `UPGRADE-REVIEW-VI.md`. The baseline scope below predates this upgrade. Browser cart/wishlist are local, not account-synchronized; manual bank confirmation is not a gateway integration.
+
 # Ma trận phạm vi
 
 ## Có trong bản bàn giao

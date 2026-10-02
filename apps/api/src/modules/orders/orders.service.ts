@@ -8,6 +8,7 @@ import { OrderStatus, PaymentStatus, Prisma, type Role } from '@prisma/client';
 import type { OrderDto } from '@secure-commerce/contracts';
 import {
   assertOrderTransition,
+  canCustomerTransition,
   DomainError,
   requiresInventoryReservationRelease,
   requiresInventoryRestock,
@@ -26,7 +27,7 @@ export class OrdersService {
     const [orders, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: orderInclude,
@@ -89,7 +90,7 @@ export class OrdersService {
     const [orders, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: ((dto.page || 1) - 1) * (dto.pageSize || 10),
         take: dto.pageSize || 10,
         include: orderInclude,
@@ -126,6 +127,9 @@ export class OrdersService {
         async (tx) => {
           const current = await tx.order.findUnique({ where: { id: orderId }, include: orderInclude });
           if (!current) throw orderNotFound();
+          if (actor.role === 'CUSTOMER' && !canCustomerTransition(actor.id, current.userId, current.status, target)) {
+            throw new ForbiddenException({ code: 'ORDER_ACTION_FORBIDDEN', message: 'Trạng thái đơn đã thay đổi hoặc bạn không có quyền.' });
+          }
           assertOrderTransition(current.status, target);
 
           if (target === OrderStatus.CONFIRMED) await confirmInventory(tx, current);
@@ -138,7 +142,7 @@ export class OrdersService {
               status: target,
               ...(target === OrderStatus.CONFIRMED ? { confirmedAt: now } : {}),
               ...(target === OrderStatus.SHIPPING ? { shippedAt: now } : {}),
-              ...(target === OrderStatus.DELIVERED ? { deliveredAt: now } : {}),
+              ...(target === OrderStatus.DELIVERED && !current.deliveredAt ? { deliveredAt: now } : {}),
               ...(target === OrderStatus.CANCELLED ? { cancelledAt: now } : {}),
               ...(options.cancellationReason ? { cancellationReason: options.cancellationReason } : {}),
               statusHistory: {
@@ -187,7 +191,7 @@ export class OrdersService {
             include: orderInclude,
           });
 
-          if (target === OrderStatus.DELIVERED) {
+          if (target === OrderStatus.DELIVERED && !current.deliveredAt) {
             for (const item of current.items) {
               if (item.productId) {
                 await tx.product.update({ where: { id: item.productId }, data: { soldCount: { increment: item.quantity } } });

@@ -1,6 +1,10 @@
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsArray,
+  IsUUID,
+  ArrayMaxSize,
+  ArrayUnique,
   IsIn,
   IsInt,
   IsNumber,
@@ -32,16 +36,17 @@ export class CatalogSearchDto {
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
+  @Max(2147483647)
   minPrice?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
+  @Max(2147483647)
   maxPrice?: number;
 
   @IsOptional()
-  @Type(() => Boolean)
   @IsBoolean()
   inStock?: boolean;
 
@@ -53,6 +58,7 @@ export class CatalogSearchDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(100000)
   page = 1;
 
   @IsOptional()
@@ -67,4 +73,12 @@ export class ProductDetailDto {
   @IsString()
   @MaxLength(160)
   slug: string;
+}
+
+export class CatalogSelectionDto {
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  productIds: string[];
 }

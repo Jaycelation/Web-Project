@@ -1,6 +1,6 @@
 {
   "name": "secure-commerce",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "MIRA Commerce modular monolith với Next.js, NestJS, PostgreSQL và JWE/JWS application-layer protection.",
   "workspaces": [
@@ -12,10 +12,10 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "concurrently -k -n API,WEB -c auto \"npm run dev -w @secure-commerce/api\" \"npm run dev -w @secure-commerce/web\"",
+    "dev": "npm run build:packages && node scripts/with-env.mjs run dev:raw",
     "build": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && npm run build -w @secure-commerce/contracts && npm run db:generate && npm run build -w @secure-commerce/api && npm run build -w @secure-commerce/web",
     "typecheck": "npm run db:generate && npm run typecheck --workspaces --if-present",
-    "test": "npm run test:core && npm run test:security && npm run test:workspaces",
+    "test": "npm run test:upgrade:unit && npm run test:upgrade:services && npm run test:core && npm run test:security && npm run test:workspaces",
     "test:core": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && node --test scripts/acceptance-core.test.mjs",
     "test:security": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && npm run build -w @secure-commerce/contracts && npm run db:generate && npm run build -w @secure-commerce/api && node --test scripts/acceptance-security.test.mjs",
     "test:workspaces": "npm run test --workspaces --if-present",
@@ -27,7 +27,15 @@
     "db:deploy": "npm run db:deploy -w @secure-commerce/api",
     "db:seed": "npm run db:seed -w @secure-commerce/api",
     "crypto:keys": "node scripts/generate-crypto-keys.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:upgrade:unit": "npm run build -w @secure-commerce/domain && node --test scripts/acceptance-upgrade.test.mjs",
+    "test:upgrade:services": "npm run build -w @secure-commerce/domain && node --test scripts/acceptance-upgrade-services.test.mjs",
+    "check:syntax": "node scripts/check-source-syntax.cjs",
+    "security:patch-next": "npm install --save-exact next@16.3.8 -w @secure-commerce/web",
+    "test:upgrade:api": "node scripts/acceptance-upgrade-api.mjs",
+    "dev:raw": "concurrently -k -n API,WEB -c auto \"npm run dev -w @secure-commerce/api\" \"npm run dev -w @secure-commerce/web\"",
+    "build:packages": "npm run build -w @secure-commerce/crypto-envelope && npm run build -w @secure-commerce/domain && npm run build -w @secure-commerce/contracts",
+    "local": "node scripts/with-env.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

@@ -1,3 +1,5 @@
+NOTE v0.2 (2026-10-02): This is baseline documentation retained from the uploaded ZIP. Historical PASS claims were NOT revalidated. Current evidence and limitations: docs/verification/README.md and docs/UPGRADE-REVIEW-VI.md.
+
 # Checklist nghiệm thu
 
 ## A. Tự động

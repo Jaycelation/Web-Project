@@ -54,6 +54,11 @@ export class CheckoutService {
 
 
   async quote(dto: CheckoutQuoteDto, user: AuthenticatedUser | undefined) {
+    try { return await this.quoteInternal(dto, user); }
+    catch (error) { throw mapDomainError(error); }
+  }
+
+  private async quoteInternal(dto: CheckoutQuoteDto, user: AuthenticatedUser | undefined) {
     const mergedLines = mergeLines(dto.items);
     const variants = await this.prisma.productVariant.findMany({
       where: { id: { in: [...mergedLines.keys()] } },

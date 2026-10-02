@@ -39,6 +39,7 @@ export interface ProductVariantDto {
 }
 
 export interface ProductSummaryDto {
+  availableStock?: number;
   id: string;
   slug: string;
   name: string;
@@ -215,4 +216,27 @@ export interface ApiErrorPayload {
   details?: unknown;
   requestId: string;
   timestamp: string;
+}
+
+// v0.2 contracts. Public review data deliberately omits email and user IDs.
+export interface PageResult<T> { items: T[]; total: number; page: number; pageSize: number }
+export interface PublicReviewDto {
+  id: string; rating: number; comment: string; authorName: string; createdAt: string;
+  verifiedPurchase: boolean;
+}
+export interface ReviewSummaryDto { count: number; average: number | null; distribution: Record<number, number> }
+export interface ReviewListResult extends PageResult<PublicReviewDto> { summary: ReviewSummaryDto }
+export interface ReviewEligibilityDto { orderItemId: string; orderNo: string; variantName: string }
+export interface CouponAdminDto {
+  id: string; code: string; name: string; type: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING';
+  value: number; minOrder: number; maxDiscount: number | null; usageLimit: number | null;
+  usagePerUser: number; usedCount: number; active: boolean; startsAt: string; expiresAt: string;
+}
+export interface AdminReviewDto {
+  id: string; rating: number; comment: string; status: 'PENDING' | 'APPROVED' | 'HIDDEN';
+  createdAt: string; product: { name: string; slug: string }; user: { name: string };
+}
+export interface AuditEntryDto {
+  id: string; action: string; entityType: string; entityId: string | null;
+  createdAt: string; actor: { name: string } | null;
 }

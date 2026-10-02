@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProductStatus } from '@prisma/client';
 import type {
   CatalogSearchResult,
@@ -24,57 +24,45 @@ export class CatalogService {
   async search(dto: CatalogSearchDto): Promise<CatalogSearchResult> {
     const page = dto.page || 1;
     const pageSize = dto.pageSize || 12;
-    const where: Prisma.ProductWhereInput = {
-      status: ProductStatus.ACTIVE,
-      ...(dto.category ? { category: { slug: dto.category, active: true } } : {}),
-      ...(dto.brand ? { brand: { slug: dto.brand, active: true } } : {}),
-      ...(dto.minPrice !== undefined || dto.maxPrice !== undefined
-        ? {
-            basePrice: {
-              ...(dto.minPrice !== undefined ? { gte: dto.minPrice } : {}),
-              ...(dto.maxPrice !== undefined ? { lte: dto.maxPrice } : {}),
-            },
-          }
-        : {}),
-      ...(dto.inStock ? { variants: { some: { active: true, stock: { gt: 0 } } } } : {}),
-      ...(dto.query
-        ? {
-            OR: [
-              { name: { contains: dto.query, mode: 'insensitive' } },
-              { skuBase: { contains: dto.query, mode: 'insensitive' } },
-              { shortDescription: { contains: dto.query, mode: 'insensitive' } },
-              { variants: { some: { sku: { contains: dto.query, mode: 'insensitive' } } } },
-            ],
-          }
-        : {}),
-    };
 
-    const orderBy: Prisma.ProductOrderByWithRelationInput =
-      dto.sort === 'price_asc'
-        ? { basePrice: 'asc' }
-        : dto.sort === 'price_desc'
-          ? { basePrice: 'desc' }
-          : dto.sort === 'popular'
-            ? { soldCount: 'desc' }
-            : { createdAt: 'desc' };
-
-    const [products, total, categories, brands] = await this.prisma.$transaction([
-      this.prisma.product.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          category: true,
-          brand: true,
-          images: { orderBy: { position: 'asc' } },
-          variants: { where: { active: true }, orderBy: { price: 'asc' } },
-        },
-      }),
-      this.prisma.product.count({ where }),
-      this.prisma.category.findMany({ where: { active: true }, orderBy: [{ position: 'asc' }, { name: 'asc' }] }),
-      this.prisma.brand.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
-    ]);
+    if (dto.minPrice !== undefined && dto.maxPrice !== undefined && dto.minPrice > dto.maxPrice) {
+      throw new BadRequestException({ code: 'PRICE_RANGE_INVALID', message: 'Giá từ phải nhỏ hơn hoặc bằng giá đến.' });
+    }
+    // One authoritative display price: MIN(price) over ACTIVE variants.
+    // All input values are bound parameters; sorting uses only static SQL fragments.
+    const predicates: Prisma.Sql[] = [Prisma.sql`p."status" = 'ACTIVE' AND c."active" = TRUE AND v."price" IS NOT NULL`];
+    if (dto.category) predicates.push(Prisma.sql`c."slug" = ${dto.category}`);
+    if (dto.brand) predicates.push(Prisma.sql`b."slug" = ${dto.brand} AND b."active" = TRUE`);
+    if (dto.minPrice !== undefined) predicates.push(Prisma.sql`v."price" >= ${dto.minPrice}`);
+    if (dto.maxPrice !== undefined) predicates.push(Prisma.sql`v."price" <= ${dto.maxPrice}`);
+    if (dto.inStock) predicates.push(Prisma.sql`v."inStock" = TRUE`);
+    if (dto.query) predicates.push(Prisma.sql`(
+      strpos(lower(p."name"), lower(${dto.query})) > 0 OR
+      strpos(lower(p."skuBase"), lower(${dto.query})) > 0 OR
+      strpos(lower(p."shortDescription"), lower(${dto.query})) > 0 OR
+      EXISTS (SELECT 1 FROM "ProductVariant" sv WHERE sv."productId" = p."id" AND sv."active" = TRUE
+        AND strpos(lower(sv."sku"), lower(${dto.query})) > 0))`);
+    const source = Prisma.sql`FROM "Product" p
+      JOIN "Category" c ON c."id" = p."categoryId"
+      LEFT JOIN "Brand" b ON b."id" = p."brandId"
+      JOIN LATERAL (SELECT MIN(pv."price") AS "price", BOOL_OR(pv."stock" > pv."reservedStock") AS "inStock"
+        FROM "ProductVariant" pv WHERE pv."productId" = p."id" AND pv."active" = TRUE) v ON TRUE
+      WHERE ${Prisma.join(predicates, ' AND ')}`;
+    const order = dto.sort === 'price_asc' ? Prisma.sql`v."price" ASC, p."id" ASC`
+      : dto.sort === 'price_desc' ? Prisma.sql`v."price" DESC, p."id" ASC`
+      : dto.sort === 'popular' ? Prisma.sql`p."soldCount" DESC, p."id" ASC`
+      : Prisma.sql`p."createdAt" DESC, p."id" ASC`;
+    const { products, total, categories, brands } = await this.prisma.$transaction(async (tx) => {
+      const ids = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT p."id" ${source} ORDER BY ${order} LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`);
+      const counts = await tx.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`SELECT COUNT(*) AS total ${source}`);
+      const found = await tx.product.findMany({ where: { id: { in: ids.map((row) => row.id) } }, include: catalogInclude });
+      const byId = new Map(found.map((product) => [product.id, product]));
+      const categories = await tx.category.findMany({ where: { active: true }, orderBy: [{ position: 'asc' }, { name: 'asc' }] });
+      const brands = await tx.brand.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
+      return { products: ids.flatMap(({ id }) => { const p = byId.get(id); return p ? [p] : []; }),
+        total: Number(counts[0]?.total ?? 0), categories, brands };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
     return {
       items: products.map(toSummary),
@@ -86,9 +74,18 @@ export class CatalogService {
     };
   }
 
+  async selection(productIds: string[]) {
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, status: 'ACTIVE', category: { active: true }, variants: { some: { active: true } } },
+      include: catalogInclude,
+    });
+    const byId = new Map(products.map((product) => [product.id, product]));
+    return { items: productIds.flatMap((id) => { const product = byId.get(id); return product ? [toSummary(product)] : []; }) };
+  }
+
   async detail(slug: string): Promise<ProductDetailDto> {
     const product = await this.prisma.product.findFirst({
-      where: { slug, status: ProductStatus.ACTIVE },
+      where: { slug, status: ProductStatus.ACTIVE, category: { active: true }, variants: { some: { active: true } } },
       include: {
         category: true,
         brand: true,
@@ -104,6 +101,7 @@ export class CatalogService {
         id: { not: product.id },
         categoryId: product.categoryId,
         status: ProductStatus.ACTIVE,
+        variants: { some: { active: true } },
       },
       orderBy: [{ soldCount: 'desc' }, { createdAt: 'desc' }],
       take: 4,
@@ -168,6 +166,7 @@ function toSummary(product: CatalogProduct): ProductSummaryDto {
       : null,
     featured: product.featured,
     soldCount: product.soldCount,
+    availableStock: product.variants.reduce((sum, variant) => sum + Math.max(0, variant.stock - variant.reservedStock), 0),
   };
 }
 
@@ -177,3 +176,9 @@ function jsonRecord(value: Prisma.JsonValue): Record<string, string> {
     Object.entries(value).map(([key, item]) => [key, typeof item === 'string' ? item : String(item)]),
   );
 }
+
+const catalogInclude = {
+  category: true, brand: true,
+  images: { orderBy: { position: 'asc' } },
+  variants: { where: { active: true }, orderBy: [{ price: 'asc' }, { id: 'asc' }] },
+} satisfies Prisma.ProductInclude;

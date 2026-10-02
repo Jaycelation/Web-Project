@@ -1,0 +1,2 @@
+6 package manifests match workspace versions and dependency specifications in package-lock.json.
+Registry dependency integrity fields were not fabricated or rewritten.
